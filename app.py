@@ -12,6 +12,7 @@ app = Flask(__name__)
 twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_NUMBER")
+base_url = os.getenv("BASE_URL")  # ← pega a URL pública (Render)
 client = Client(twilio_sid, twilio_token)
 
 CONTACTS_FILE = "contacts.json"
@@ -68,7 +69,14 @@ def verifica_sinal():
     elif tentativa < 2:
         print("Não entendi. Tentando novamente...")
         resp = VoiceResponse()
-        gather = Gather(input="speech", timeout=5, speechTimeout="auto", action=f"/verifica-sinal?tentativa={tentativa + 1}", method="POST", language="pt-BR")
+        gather = Gather(
+            input="speech",
+            timeout=5,
+            speechTimeout="auto",
+            action=f"{base_url}/verifica-sinal?tentativa={tentativa + 1}",
+            method="POST",
+            language="pt-BR"
+        )
         gather.say("Não entendi. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.say("Encerrando ligação.", language="pt-BR", voice="Polly.Camila")
@@ -87,18 +95,18 @@ def ligar_para_verificacao(numero):
         from_=twilio_number,
         twiml=f'''
         <Response>
-            <Gather input="speech" timeout="5" speechTimeout="auto" action="/verifica-sinal?tentativa=1" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento. Está tudo certo?</Say>
+            <Gather input="speech" timeout="5" speechTimeout="auto" action="{base_url}/verifica-sinal?tentativa=1" method="POST" language="pt-BR">
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
             </Gather>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
         '''
     )
 
-@app.route("/verificacao/<nome>")
-def verificacao(nome):
+@app.route("/testar-verificacao/<nome>")
+def testar_verificacao(nome):
     ligar_para_verificacao_por_nome(nome)
-    return f"Ligação de verificação para {nome} iniciada com sucesso."
+    return f"Ligação de verificação para {nome} iniciada."
 
 def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
