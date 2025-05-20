@@ -95,8 +95,10 @@ def ligar_para_verificacao(numero):
         from_=twilio_number,
         twiml=f'''
         <Response>
-            <Gather input="speech" timeout="5" speechTimeout="auto" action="{base_url}/verifica-sinal?tentativa=1" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento. Está tudo certo?</Say>
+            <Gather input="speech" timeout="5" speechTimeout="auto" 
+                    action="https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1" 
+                    method="POST" language="pt-BR">
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
             </Gather>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
