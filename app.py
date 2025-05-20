@@ -133,3 +133,8 @@ scheduler.start()
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))  # Pega a variável de ambiente "PORT" ou usa 5000 por padrão
+    app.run(host="0.0.0.0", port=port, debug=True)
+
