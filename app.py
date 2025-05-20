@@ -1,3 +1,5 @@
+app.py funcional (verificação - protegido)
+
 import os
 import json
 from flask import Flask, request, Response, jsonify, send_from_directory
@@ -5,7 +7,6 @@ from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
-from urllib.parse import quote
 
 load_dotenv()
 app = Flask(__name__)
@@ -62,7 +63,6 @@ def serve_painel():
 def verifica_sinal():
     resposta = request.form.get("SpeechResult", "").lower()
     tentativa = int(request.args.get("tentativa", 1))
-    nome = request.args.get("nome", "desconhecido")
     print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
 
     if "protegido" in resposta:
@@ -75,7 +75,7 @@ def verifica_sinal():
             input="speech",
             timeout=5,
             speechTimeout="auto",
-            action=f"/verifica-sinal?tentativa={tentativa + 1}&nome={nome}",
+            action=f"{base_url}/verifica-sinal?tentativa={tentativa + 1}",
             method="POST",
             language="pt-BR"
         )
@@ -84,36 +84,22 @@ def verifica_sinal():
         resp.say("Encerrando ligação.", language="pt-BR", voice="Polly.Camila")
         return Response(str(resp), mimetype="text/xml")
     else:
-        print(f"Falha na verificação de {nome}. Ligando para emergência...")
+        print("Nenhuma resposta válida. Ligando para emergência.")
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
         if numero_emergencia:
-            ligar_para_emergencia(numero_emergencia, nome)
+            ligar_para_verificacao(numero_emergencia)
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
-def ligar_para_emergencia(numero, nome):
-    client.calls.create(
-        to=numero,
-        from_=twilio_number,
-        twiml=f'''
-        <Response>
-            <Say voice="Polly.Camila" language="pt-BR">
-                Olá. O contato {nome} não respondeu corretamente à verificação de segurança.
-            </Say>
-        </Response>
-        '''
-    )
-
-def ligar_para_verificacao(numero, nome="desconhecido"):
-    nome_codificado = quote(nome)  # Codifica a variável 'nome' para que seja segura para URL
-    full_url = f"https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1&nome={nome_codificado}"
+def ligar_para_verificacao(numero):
+    full_url = "https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1"
     client.calls.create(
         to=numero,
         from_=twilio_number,
         twiml=f'''
         <Response>
             <Gather input="speech" timeout="5" speechTimeout="auto" action="{full_url}" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento. Está tudo certo?</Say>
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
             </Gather>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
@@ -130,7 +116,8 @@ def ligar_para_verificacao_por_nome(nome):
     numero = contatos.get(nome)
     if numero:
         print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
-        ligar_para_verificacao(numero, nome)
+        ligar_para_verificacao(numero)
+
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
