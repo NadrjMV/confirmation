@@ -5,6 +5,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
+from urllib.parse import quote
 
 load_dotenv()
 app = Flask(__name__)
@@ -104,7 +105,8 @@ def ligar_para_emergencia(numero, nome):
     )
 
 def ligar_para_verificacao(numero, nome="desconhecido"):
-    full_url = f"https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1&nome={nome}"
+    nome_codificado = quote(nome)  # Codifica a variável 'nome' para que seja segura para URL
+    full_url = f"https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1&nome={nome_codificado}"
     client.calls.create(
         to=numero,
         from_=twilio_number,
@@ -117,7 +119,6 @@ def ligar_para_verificacao(numero, nome="desconhecido"):
         </Response>
         '''
     )
-
 
 @app.route("/testar-verificacao/<nome>")
 def testar_verificacao(nome):
