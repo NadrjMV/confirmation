@@ -103,20 +103,21 @@ def ligar_para_emergencia(numero, nome):
         '''
     )
 
-def ligar_para_verificacao(numero):
-full_url = f"https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1&nome={nome}"
+def ligar_para_verificacao(numero, nome="desconhecido"):
+    full_url = f"https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1&nome={nome}"
     client.calls.create(
         to=numero,
         from_=twilio_number,
         twiml=f'''
         <Response>
             <Gather input="speech" timeout="5" speechTimeout="auto" action="{full_url}" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento. Está tudo certo?</Say>
             </Gather>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
         '''
     )
+
 
 @app.route("/testar-verificacao/<nome>")
 def testar_verificacao(nome):
