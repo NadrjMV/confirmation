@@ -90,14 +90,13 @@ def verifica_sinal():
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
 def ligar_para_verificacao(numero):
+    full_url = "https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1"
     client.calls.create(
         to=numero,
         from_=twilio_number,
         twiml=f'''
         <Response>
-            <Gather input="speech" timeout="5" speechTimeout="auto" 
-                    action="https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1" 
-                    method="POST" language="pt-BR">
+            <Gather input="speech" timeout="5" speechTimeout="auto" action="{full_url}" method="POST" language="pt-BR">
                 <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
             </Gather>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
