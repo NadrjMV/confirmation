@@ -1,5 +1,3 @@
-app.py funcional (verificação - protegido)
-
 import os
 import json
 from flask import Flask, request, Response, jsonify, send_from_directory
