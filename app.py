@@ -61,6 +61,7 @@ def serve_painel():
 def verifica_sinal():
     resposta = request.form.get("SpeechResult", "").lower()
     tentativa = int(request.args.get("tentativa", 1))
+    nome = request.args.get("nome", "desconhecido")
     print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
 
     if "protegido" in resposta:
@@ -73,7 +74,7 @@ def verifica_sinal():
             input="speech",
             timeout=5,
             speechTimeout="auto",
-            action=f"{base_url}/verifica-sinal?tentativa={tentativa + 1}",
+            action=f"/verifica-sinal?tentativa={tentativa + 1}&nome={nome}",
             method="POST",
             language="pt-BR"
         )
@@ -82,15 +83,28 @@ def verifica_sinal():
         resp.say("Encerrando ligação.", language="pt-BR", voice="Polly.Camila")
         return Response(str(resp), mimetype="text/xml")
     else:
-        print("Nenhuma resposta válida. Ligando para emergência.")
+        print(f"Falha na verificação de {nome}. Ligando para emergência...")
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
         if numero_emergencia:
-            ligar_para_verificacao(numero_emergencia)
+            ligar_para_emergencia(numero_emergencia, nome)
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
+def ligar_para_emergencia(numero, nome):
+    client.calls.create(
+        to=numero,
+        from_=twilio_number,
+        twiml=f'''
+        <Response>
+            <Say voice="Polly.Camila" language="pt-BR">
+                Olá. O contato {nome} não respondeu corretamente à verificação de segurança.
+            </Say>
+        </Response>
+        '''
+    )
+
 def ligar_para_verificacao(numero):
-    full_url = "https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1"
+full_url = f"https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1&nome={nome}"
     client.calls.create(
         to=numero,
         from_=twilio_number,
@@ -114,7 +128,7 @@ def ligar_para_verificacao_por_nome(nome):
     numero = contatos.get(nome)
     if numero:
         print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
-        ligar_para_verificacao(numero)
+        ligar_para_verificacao(numero, nome)
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
