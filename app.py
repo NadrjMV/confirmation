@@ -96,7 +96,7 @@ def ligar_para_verificacao(numero):
         twiml=f'''
         <Response>
             <Gather input="speech" timeout="5" speechTimeout="auto" action="{base_url}/verifica-sinal?tentativa=1" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento. Está tudo certo?</Say>
             </Gather>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
