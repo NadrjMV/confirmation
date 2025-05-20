@@ -95,10 +95,10 @@ def ligar_para_verificacao(numero):
         '''
     )
 
-@app.route("/testar-verificacao/<nome>")
-def testar_verificacao(nome):
-    ligar_para_verificacao_por_nome(nome)
-    return f"Ligação de verificação para {nome} iniciada."
+# Novo endpoint que lida com verificações de qualquer nome de verificação
+@app.route("/verificacao/<nome>", methods=["GET"])
+def verificacao(nome):
+    return ligar_para_verificacao_por_nome(nome)
 
 def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
@@ -106,6 +106,8 @@ def ligar_para_verificacao_por_nome(nome):
     if numero:
         print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
         ligar_para_verificacao(numero)
+    else:
+        print(f"[ERRO] Não encontrado número para {nome}")
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
@@ -133,4 +135,4 @@ scheduler.start()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Pega a variável de ambiente "PORT" ou usa 5000 por padrão
-    app.run(host="0.0.0.0", port=port, debug=True)  # Mudança no host para 0.0.0.0
+    app.run(host="0.0.0.0", port=port, debug=True)
