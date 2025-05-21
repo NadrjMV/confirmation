@@ -171,37 +171,70 @@ def agendar_ligacao_para(nome):
 
 # AGENDA
 def agendar_multiplas_ligacoes():
+    scheduler.remove_all_jobs()
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "hora": 11, "minutos": [46,48,50]},  # minutos múltiplos
+        {"nome": "joão do posto 2", "hora": 11, "minutos": [20, 40, 50]},  # múltiplas ligações em minutos diferentes
     ]
-    
+
     for ag in agendamentos:
         nome_formatado = ag["nome"].replace(" ", "_")
-        
-        if "hora_inicio" in ag and "hora_fim" in ag:
+
+        if "hora_inicio" in ag and "hora_fim" in ag and "minuto" in ag:
+            # Vários horários com minuto fixo
             for hora in range(ag["hora_inicio"], ag["hora_fim"] + 1):
                 job_id = f"verificacao_{nome_formatado}_{hora:02d}_{ag['minuto']:02d}"
                 if not scheduler.get_job(job_id):
+                    def job_func(nome=ag["nome"]):
+                        print(f"[DISPARANDO CHAMADA] Ligando para {nome} às {hora:02d}:{ag['minuto']:02d}")
+                        ligar_para_verificacao_por_nome(nome)
+
                     scheduler.add_job(
-                        func=partial(ligar_para_verificacao_por_nome, ag["nome"]),
-                        trigger='cron',
+                        job_func,
+                        'cron',
                         hour=hora,
                         minute=ag["minuto"],
                         id=job_id
                     )
-                    print(f"[AGENDADO] {job_id} para {ag['nome']} às {hora}:{ag['minuto']:02d}")
-        else:
+                    print(f"[AGENDADO] {job_id} para {ag['nome']} às {hora:02d}:{ag['minuto']:02d}")
+
+        elif "hora" in ag and "minutos" in ag:
+            # Uma hora com múltiplos minutos
+            for minuto in ag["minutos"]:
+                job_id = f"verificacao_{nome_formatado}_{ag['hora']:02d}_{minuto:02d}"
+                if not scheduler.get_job(job_id):
+                    def job_func(nome=ag["nome"], h=ag["hora"], m=minuto):
+                        print(f"[DISPARANDO CHAMADA] Ligando para {nome} às {h:02d}:{m:02d}")
+                        ligar_para_verificacao_por_nome(nome)
+
+                    scheduler.add_job(
+                        job_func,
+                        'cron',
+                        hour=ag["hora"],
+                        minute=minuto,
+                        id=job_id
+                    )
+                    print(f"[AGENDADO] {job_id} para {ag['nome']} às {ag['hora']:02d}:{minuto:02d}")
+
+        elif "hora" in ag and "minuto" in ag:
+            # Uma ligação única (hora e minuto único)
             job_id = f"verificacao_{nome_formatado}_{ag['hora']:02d}_{ag['minuto']:02d}"
             if not scheduler.get_job(job_id):
+                def job_func(nome=ag["nome"], h=ag["hora"], m=ag["minuto"]):
+                    print(f"[DISPARANDO CHAMADA] Ligando para {nome} às {h:02d}:{m:02d}")
+                    ligar_para_verificacao_por_nome(nome)
+
                 scheduler.add_job(
-                    func=partial(ligar_para_verificacao_por_nome, ag["nome"]),
-                    trigger='cron',
+                    job_func,
+                    'cron',
                     hour=ag["hora"],
                     minute=ag["minuto"],
                     id=job_id
                 )
-                print(f"[AGENDADO] {job_id} para {ag['nome']} às {ag['hora']}:{ag['minuto']:02d}")
+                print(f"[AGENDADO] {job_id} para {ag['nome']} às {ag['hora']:02d}:{ag['minuto']:02d}")
+
+        else:
+            print(f"[ERRO] Configuração inválida para agendamento: {ag}")
 
 # INICIAR
 agendar_multiplas_ligacoes()
