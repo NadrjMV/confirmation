@@ -173,8 +173,7 @@ def agendar_ligacao_para(nome):
 def agendar_multiplas_ligacoes():
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "hora": 11, "minuto": 41},
-        {"nome": "joão do posto 2", "hora": 11, "minuto": 45}
+        {"nome": "joão do posto 2", "hora": 11, "minutos": [46,48,50]},  # minutos múltiplos
     ]
     
     for ag in agendamentos:
