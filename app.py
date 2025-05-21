@@ -135,7 +135,7 @@ def agendar_multiplas_ligacoes():
 
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "horarios": [(11,41), (11,45), (11,49)]}  # ligações múltiplas em minutos diferentes
+        {"nome": "joão do posto 2", "horarios": [(12,02), (12,05)]}  # ligações múltiplas em minutos diferentes
     ]
 
     for ag in agendamentos:
