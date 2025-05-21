@@ -9,21 +9,21 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
 
-# CONFIG
+# CONFIGURAÇÕES INICIAIS
 load_dotenv()
 app = Flask(__name__)
 twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_NUMBER")
-base_url = os.getenv("BASE_URL")  # ex: https://xxxxxxxxxx.ngrok.io
+base_url = os.getenv("BASE_URL") 
 client = Client(twilio_sid, twilio_token)
 CONTACTS_FILE = "contacts.json"
 
-# SCHEDULER
+# AGENDADOR
 jobstores = {'default': MemoryJobStore()}
 scheduler = BackgroundScheduler(jobstores=jobstores)
 
-# UTILITÁRIOS
+# FUNÇÕES AUXILIARES
 def load_contacts():
     if not os.path.exists(CONTACTS_FILE):
         return {}
@@ -46,7 +46,7 @@ def _twiml_response(texto, voice="Polly.Camila"):
     resp.say(texto, language="pt-BR", voice=voice)
     return Response(str(resp), mimetype="text/xml")
 
-# FLASK ROUTES
+# ROTAS FLASK
 @app.route("/add-contact", methods=["POST"])
 def add_contact():
     data = request.get_json()
@@ -179,7 +179,7 @@ def ligar_para_verificacao_por_nome(nome):
 # AGENDAMENTOS
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "jordan", "hora": 13, "minuto": 21},
+        {"nome": "jordan", "hora": 13, "minuto": 40},
     ]
 
     for ag in agendamentos:
@@ -196,7 +196,7 @@ def agendar_multiplas_ligacoes():
             )
             print(f"[AGENDADO] {job_id} para {ag['nome']} às {ag['hora']:02d}:{ag['minuto']:02d}")
 
-# START
+# INÍCIO
 agendar_multiplas_ligacoes()
 scheduler.start()
 
