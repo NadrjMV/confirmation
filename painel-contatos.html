@@ -26,6 +26,7 @@
 
     h1, h2 {
       color: #333;
+      text-align: center;
     }
 
     ul {
@@ -42,6 +43,11 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    li.emergencia {
+      background-color: #f8d7da; /* Vermelho claro para emergência */
+      border: 1px solid #f5c6cb;
     }
 
     button {
@@ -67,6 +73,9 @@
 
     .form-container {
       margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
 
     footer {
@@ -78,17 +87,28 @@
       border-top: 1px solid #ccc;
     }
 
-  .footer-content {
-    display: flex;
-   justify-content: center;
-   align-items: center;
-   flex-wrap: wrap;
-   max-width: 800px;
-    margin: 0 auto;
-  }
+    .footer-content {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      max-width: 800px;
+      margin: 0 auto;
+    }
 
     .footer-content img {
       height: 40px;
+      object-fit: contain;
+    }
+
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .logo-container img {
+      height: 50px;
       object-fit: contain;
     }
 
@@ -98,11 +118,6 @@
         gap: 10px;
       }
     }
-
-.logo-container img {
-  height: 50px;
-  object-fit: contain;
-}
 
   </style>
 </head>
@@ -137,10 +152,14 @@
       lista.innerHTML = '';
       for (const [nome, telefone] of Object.entries(contatos)) {
         const item = document.createElement('li');
+        const isEmergencia = nome.toLowerCase() === 'emergencia'; // Identificando se é o contato de emergência
+
+        item.classList.add(isEmergencia ? 'emergencia' : ''); // Adiciona a classe 'emergencia' se for o caso
+
         item.innerHTML = `
           <span><strong>${nome}</strong>: ${telefone}</span>
           <div>
-            <button onclick="deletarContato('${nome}')">🗑️ Deletar</button>
+            <button onclick="trocarContato('${nome}')">🔄 Trocar</button>
           </div>
         `;
         lista.appendChild(item);
@@ -158,6 +177,30 @@
       const result = await res.json();
       alert(result.mensagem);
       carregarContatos();
+    }
+
+    async function trocarContato(nome) {
+      const novoNome = prompt(`Digite o novo nome para o contato "${nome}":`);
+      const novoTelefone = prompt(`Digite o novo telefone para "${novoNome}":`);
+
+      if (novoNome && novoTelefone) {
+        const res = await fetch('/delete-contact', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ nome })
+        });
+
+        const result = await res.json();
+        alert(result.mensagem);
+
+        await fetch('/add-contact', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ nome: novoNome, telefone: novoTelefone })
+        });
+
+        carregarContatos();
+      }
     }
 
     async function deletarContato(nome) {
