@@ -80,7 +80,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Não entendi. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         # Adiciona Redirect mesmo se não houver resposta
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
