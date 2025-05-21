@@ -62,15 +62,16 @@ def serve_painel():
 
 @app.route("/verifica-sinal", methods=["POST"])
 def verifica_sinal():
-    resposta = request.form.get("SpeechResult", "").lower()
+    resposta = request.form.get("SpeechResult", "")
     tentativa = int(request.args.get("tentativa", 1))
-    print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
+    print(f"[RESPOSTA - Tentativa {tentativa}] {resposta!r}")
 
-    if "protegido" in resposta:
+    if "protegido" in resposta.lower():
         print("Palavra correta detectada.")
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
+
     elif tentativa < 2:
-        print("Não entendi. Tentando novamente...")
+        print("Resposta vazia ou incorreta. Tentando novamente...")
         resp = VoiceResponse()
         gather = Gather(
             input="speech",
@@ -82,8 +83,9 @@ def verifica_sinal():
         )
         gather.say("Não entendi. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
-        resp.say("Encerrando ligação.", language="pt-BR", voice="Polly.Camila")
+        # ❌ REMOVIDO: resp.say("Encerrando ligação.")
         return Response(str(resp), mimetype="text/xml")
+
     else:
         print("Nenhuma resposta válida. Ligando para emergência.")
         contatos = load_contacts()
@@ -92,7 +94,6 @@ def verifica_sinal():
         if numero_emergencia and validar_numero(numero_emergencia):
             numero_falhou = request.values.get("From", "desconhecido")
             nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
-            print(f"[ERRO DE VERIFICAÇÃO] Falha detectada de {nome_falhou or numero_falhou}")
 
             ligar_para_emergencia(
                 numero_destino=numero_emergencia,
