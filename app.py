@@ -2,6 +2,7 @@ import os
 import json
 import html
 import phonenumbers
+from functools import partial
 from phonenumbers import NumberParseException, is_valid_number
 from flask import Flask, request, Response, jsonify, send_from_directory
 from twilio.twiml.voice_response import VoiceResponse, Gather
@@ -172,30 +173,36 @@ def agendar_ligacao_para(nome):
 def agendar_multiplas_ligacoes():
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "hora": 11, "minuto": 36}
+        {"nome": "joão do posto 2", "hora": 11, "minuto": 41},
+        {"nome": "joão do posto 2", "hora": 11, "minuto": 45}
     ]
+    
     for ag in agendamentos:
+        nome_formatado = ag["nome"].replace(" ", "_")
+        
         if "hora_inicio" in ag and "hora_fim" in ag:
             for hora in range(ag["hora_inicio"], ag["hora_fim"] + 1):
-            job_id = f"verificacao_{ag['nome']}_unica"
+                job_id = f"verificacao_{nome_formatado}_{hora:02d}_{ag['minuto']:02d}"
                 if not scheduler.get_job(job_id):
                     scheduler.add_job(
-                        agendar_ligacao_para(ag["nome"]),
-                        'cron',
+                        func=partial(ligar_para_verificacao_por_nome, ag["nome"]),
+                        trigger='cron',
                         hour=hora,
                         minute=ag["minuto"],
                         id=job_id
                     )
+                    print(f"[AGENDADO] {job_id} para {ag['nome']} às {hora}:{ag['minuto']:02d}")
         else:
-            job_id = f"verificacao_{ag['nome']}_unica"
+            job_id = f"verificacao_{nome_formatado}_{ag['hora']:02d}_{ag['minuto']:02d}"
             if not scheduler.get_job(job_id):
                 scheduler.add_job(
-                    agendar_ligacao_para(ag["nome"]),
-                    'cron',
+                    func=partial(ligar_para_verificacao_por_nome, ag["nome"]),
+                    trigger='cron',
                     hour=ag["hora"],
                     minute=ag["minuto"],
                     id=job_id
                 )
+                print(f"[AGENDADO] {job_id} para {ag['nome']} às {ag['hora']}:{ag['minuto']:02d}")
 
 # INICIAR
 agendar_multiplas_ligacoes()
