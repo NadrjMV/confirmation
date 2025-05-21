@@ -85,19 +85,15 @@ def verifica_sinal():
         print("Nenhuma resposta válida. Ligando para emergência.")
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
-if numero_emergencia:
-    numero_falhou = request.values.get("From", "desconhecido")
-    contatos = load_contacts()
+        if numero_emergencia:
+            numero_falhou = request.values.get("From", "desconhecido")
+            nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
 
-    # Tenta encontrar o nome do número que falhou
-    nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
-
-    ligar_para_verificacao(
-        numero_destino=numero_emergencia,
-        origem_falha_numero=numero_falhou,
-        origem_falha_nome=nome_falhou
-    )
-
+            ligar_para_verificacao(
+                numero_destino=numero_emergencia,
+                origem_falha_numero=numero_falhou,
+                origem_falha_nome=nome_falhou
+            )
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
 def ligar_para_verificacao(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
