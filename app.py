@@ -133,6 +133,9 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
         mensagem = html.escape(f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato.")
     else:
         mensagem = html.escape("Alguém não respondeu à verificação de segurança. Por favor, entre em contato.")
+    print(f"[EMERGÊNCIA] Origem falha nome: {origem_falha_nome}")
+    print(f"[EMERGÊNCIA] Origem falha número: {origem_falha_numero}")
+    print(f"[EMERGÊNCIA] Mensagem: {mensagem}")
 
     client.calls.create(
         to=numero_destino,
@@ -161,7 +164,8 @@ def _twiml_response(texto, voice="Polly.Camila"):
 def agendar_multiplas_ligacoes():
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "hora": 11, "minuto": 12},  # ligação única
+        {"nome": "joão do posto 2", "hora": 11, "minuto": 12}, # ligação única
+        {"nome": "joão do posto 2", "hora_inicio": 11, "hora_fim": 13, "minuto": 17}
     ]
     for ag in agendamentos:
         if "hora_inicio" in ag and "hora_fim" in ag:
