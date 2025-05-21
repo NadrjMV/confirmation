@@ -62,16 +62,15 @@ def serve_painel():
 
 @app.route("/verifica-sinal", methods=["POST"])
 def verifica_sinal():
-    resposta = request.form.get("SpeechResult", "")
+    resposta = request.form.get("SpeechResult", "").lower()
     tentativa = int(request.args.get("tentativa", 1))
-    print(f"[RESPOSTA - Tentativa {tentativa}] {resposta!r}")
+    print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
 
-    if "protegido" in resposta.lower():
+    if "protegido" in resposta:
         print("Palavra correta detectada.")
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
-
     elif tentativa < 2:
-        print("Resposta vazia ou incorreta. Tentando novamente...")
+        print("Não entendi. Tentando novamente...")
         resp = VoiceResponse()
         gather = Gather(
             input="speech",
@@ -83,9 +82,9 @@ def verifica_sinal():
         )
         gather.say("Não entendi. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
-        # ❌ REMOVIDO: resp.say("Encerrando ligação.")
+        # Adiciona Redirect mesmo se não houver resposta
+        resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
-
     else:
         print("Nenhuma resposta válida. Ligando para emergência.")
         contatos = load_contacts()
@@ -112,10 +111,15 @@ def ligar_para_verificacao(numero_destino):
         from_=twilio_number,
         twiml=f'''
         <Response>
-            <Gather input="speech" timeout="5" speechTimeout="auto" action="{full_url}" method="POST" language="pt-BR">
+            <Gather input="speech"
+                    timeout="5"
+                    speechTimeout="auto"
+                    action="{full_url}"
+                    method="POST"
+                    language="pt-BR">
                 <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
             </Gather>
-            <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
+            <Redirect method="POST">{full_url}</Redirect>
         </Response>
         '''
     )
