@@ -92,6 +92,7 @@ def verifica_sinal():
         if numero_emergencia and validar_numero(numero_emergencia):
             numero_falhou = request.values.get("From", "desconhecido")
             nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+            print(f"[ERRO DE VERIFICAÇÃO] Falha detectada de {nome_falhou or numero_falhou}")
 
             ligar_para_emergencia(
                 numero_destino=numero_emergencia,
