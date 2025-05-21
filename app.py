@@ -161,7 +161,7 @@ def _twiml_response(texto, voice="Polly.Camila"):
 def agendar_multiplas_ligacoes():
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "hora": 11, "minuto": 5},  # ligação única
+        {"nome": "joão do posto 2", "hora": 11, "minuto": 12},  # ligação única
     ]
     for ag in agendamentos:
         if "hora_inicio" in ag and "hora_fim" in ag:
