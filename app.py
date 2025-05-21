@@ -69,8 +69,7 @@ def verifica_sinal():
     if "protegido" in resposta:
         print("Palavra correta detectada.")
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
-
-    if tentativa < 2:
+    elif tentativa < 2:
         print("Não entendi. Tentando novamente...")
         resp = VoiceResponse()
         gather = Gather(
@@ -85,21 +84,26 @@ def verifica_sinal():
         resp.append(gather)
         resp.say("Encerrando ligação.", language="pt-BR", voice="Polly.Camila")
         return Response(str(resp), mimetype="text/xml")
+    else:
+        print("Nenhuma resposta válida. Ligando para emergência.")
+        contatos = load_contacts()
+        numero_emergencia = contatos.get("emergencia")
 
-    print("Nenhuma resposta válida. Ligando para emergência.")
-    contatos = load_contacts()
-    numero_emergencia = contatos.get("emergencia")
-    if numero_emergencia:
-        numero_falhou = request.values.get("From", "desconhecido")
-        nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+        # Verificando número de emergência antes de tentar fazer a chamada
+        if numero_emergencia and validar_numero(numero_emergencia):
+            numero_falhou = request.values.get("From", "desconhecido")
+            nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
 
-        ligar_para_emergencia(
-            numero_destino=numero_emergencia,
-            origem_falha_numero=numero_falhou,
-            origem_falha_nome=nome_falhou
-        )
-
-    return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
+            ligar_para_emergencia(
+                numero_destino=numero_emergencia,
+                origem_falha_numero=numero_falhou,
+                origem_falha_nome=nome_falhou
+            )
+            return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
+        else:
+            print(f"Erro: número de emergência inválido ou não disponível.")
+            # Aqui o return precisa estar dentro da função
+            return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
 
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
