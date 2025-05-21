@@ -13,7 +13,7 @@ app = Flask(__name__)
 twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_NUMBER")
-base_url = os.getenv("BASE_URL")  # ← pega a URL pública (Render)
+base_url = os.getenv("BASE_URL")  # ← pega URL pública
 client = Client(twilio_sid, twilio_token)
 
 CONTACTS_FILE = "contacts.json"
@@ -86,24 +86,43 @@ def verifica_sinal():
         print("Nenhuma resposta válida. Ligando para emergência.")
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
-        if numero_emergencia:
-            numero_falhou = request.values.get("From", "desconhecido")
-            nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+    if numero_emergencia:
+        numero_falhou = request.values.get("From", "desconhecido")
+        contatos = load_contacts()
 
-            ligar_para_verificacao(
-                numero_destino=numero_emergencia,
-                origem_falha_numero=numero_falhou,
-                origem_falha_nome=nome_falhou
-            )
+        nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+
+        ligar_para_emergencia(
+            numero_destino=numero_emergencia,
+            origem_falha_numero=numero_falhou,
+            origem_falha_nome=nome_falhou
+        )
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
-def ligar_para_verificacao(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
+def ligar_para_verificacao(numero_destino):
+    # VERIFICAÇÃO normal
+    full_url = f"{base_url}/verifica-sinal?tentativa=1"
+    client.calls.create(
+        to=numero_destino,
+        from_=twilio_number,
+        twiml=f'''
+        <Response>
+            <Gather input="speech" timeout="5" speechTimeout="auto" action="{full_url}" method="POST" language="pt-BR">
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
+            </Gather>
+            <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
+        </Response>
+        '''
+    )
+
+def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
+    # LIGAÇÃO DE EMERGÊNCIA
     if origem_falha_nome:
         mensagem = html.escape(f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato.")
     elif origem_falha_numero:
         mensagem = html.escape(f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato.")
     else:
-        mensagem = "Central de monitoramento?"
+        mensagem = html.escape("Alguém não respondeu à verificação de segurança. Por favor, entre em contato.")
 
     client.calls.create(
         to=numero_destino,
