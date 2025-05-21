@@ -85,20 +85,35 @@ def verifica_sinal():
         print("Nenhuma resposta válida. Ligando para emergência.")
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
-        if numero_emergencia:
-            ligar_para_verificacao(numero_emergencia)
+if numero_emergencia:
+    numero_falhou = request.values.get("From", "desconhecido")
+    contatos = load_contacts()
+
+    # Tenta encontrar o nome do número que falhou
+    nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+
+    ligar_para_verificacao(
+        numero_destino=numero_emergencia,
+        origem_falha_numero=numero_falhou,
+        origem_falha_nome=nome_falhou
+    )
+
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
-def ligar_para_verificacao(numero):
-    full_url = "https://confirmation-u5hq.onrender.com/verifica-sinal?tentativa=1"
+def ligar_para_verificacao(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
+    if origem_falha_nome:
+        mensagem = f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato."
+    elif origem_falha_numero:
+        mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato."
+    else:
+        mensagem = "Central de monitoramento?"
+
     client.calls.create(
-        to=numero,
+        to=numero_destino,
         from_=twilio_number,
         twiml=f'''
         <Response>
-            <Gather input="speech" timeout="5" speechTimeout="auto" action="{full_url}" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
-            </Gather>
+            <Say voice="Polly.Camila" language="pt-BR">{mensagem}</Say>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
         '''
