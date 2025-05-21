@@ -1,6 +1,8 @@
 import os
 import json
 import html
+import phonenumbers
+from phonenumbers import NumberParseException, is_valid_number
 from flask import Flask, request, Response, jsonify, send_from_directory
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
@@ -113,6 +115,27 @@ def ligar_para_verificacao(numero_destino):
         </Response>
         '''
     )
+
+def validar_numero(numero):
+    try:
+        parsed_number = phonenumbers.parse(numero, "BR")  # 'BR' é o código do país (Brasil)
+        return is_valid_number(parsed_number)
+    except NumberParseException:
+        return False
+
+# Adicionando no fluxo de emergência
+if numero_emergencia and validar_numero(numero_emergencia):
+    numero_falhou = request.values.get("From", "desconhecido")
+    nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+
+    ligar_para_emergencia(
+        numero_destino=numero_emergencia,
+        origem_falha_numero=numero_falhou,
+        origem_falha_nome=nome_falhou
+    )
+else:
+    print(f"Erro: número de emergência inválido ou não disponível.")
+    return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
     if origem_falha_nome:
