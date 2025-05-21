@@ -178,7 +178,7 @@ def agendar_multiplas_ligacoes():
     for ag in agendamentos:
         if "hora_inicio" in ag and "hora_fim" in ag:
             for hora in range(ag["hora_inicio"], ag["hora_fim"] + 1):
-                job_id = f"verificacao_{ag['nome'].replace(' ', '_')}_{ag['hora']:02d}_{ag['minuto']:02d}"
+            job_id = f"verificacao_{ag['nome']}_unica"
                 if not scheduler.get_job(job_id):
                     scheduler.add_job(
                         agendar_ligacao_para(ag["nome"]),
