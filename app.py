@@ -13,7 +13,7 @@ app = Flask(__name__)
 twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_NUMBER")
-base_url = os.getenv("BASE_URL")  # ← pega URL pública
+base_url = os.getenv("BASE_URL")
 client = Client(twilio_sid, twilio_token)
 
 CONTACTS_FILE = "contacts.json"
@@ -67,7 +67,8 @@ def verifica_sinal():
     if "protegido" in resposta:
         print("Palavra correta detectada.")
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
-    elif tentativa < 2:
+
+    if tentativa < 2:
         print("Não entendi. Tentando novamente...")
         resp = VoiceResponse()
         gather = Gather(
@@ -82,14 +83,12 @@ def verifica_sinal():
         resp.append(gather)
         resp.say("Encerrando ligação.", language="pt-BR", voice="Polly.Camila")
         return Response(str(resp), mimetype="text/xml")
-    else:
-        print("Nenhuma resposta válida. Ligando para emergência.")
-        contatos = load_contacts()
-        numero_emergencia = contatos.get("emergencia")
+
+    print("Nenhuma resposta válida. Ligando para emergência.")
+    contatos = load_contacts()
+    numero_emergencia = contatos.get("emergencia")
     if numero_emergencia:
         numero_falhou = request.values.get("From", "desconhecido")
-        contatos = load_contacts()
-
         nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
 
         ligar_para_emergencia(
@@ -97,10 +96,10 @@ def verifica_sinal():
             origem_falha_numero=numero_falhou,
             origem_falha_nome=nome_falhou
         )
-        return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
+
+    return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
 
 def ligar_para_verificacao(numero_destino):
-    # VERIFICAÇÃO normal
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
     client.calls.create(
         to=numero_destino,
@@ -116,7 +115,6 @@ def ligar_para_verificacao(numero_destino):
     )
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
-    # LIGAÇÃO DE EMERGÊNCIA
     if origem_falha_nome:
         mensagem = html.escape(f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato.")
     elif origem_falha_numero:
@@ -146,7 +144,6 @@ def ligar_para_verificacao_por_nome(nome):
     if numero:
         print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
         ligar_para_verificacao(numero)
-
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
