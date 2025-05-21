@@ -1,248 +1,171 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Painel de Contatos - SunShield</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f9f9f9;
-      padding: 30px;
-      box-sizing: border-box;
-    }
-
-    main {
-      flex: 1;
-    }
-
-    h1, h2 {
-      color: #333;
-      text-align: center;
-      font-family: 'Arial', sans-serif;
-    }
-
-    ul {
-      list-style-type: none;
-      padding: 0;
-      margin-top: 20px;
-    }
-
-    li {
-      background: #fff;
-      margin-bottom: 15px;
-      padding: 15px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      font-size: 16px;
-    }
-
-    li.emergencia {
-      background-color: #ffcccc; /* Vermelho claro para emergência */
-      border-left: 5px solid red;
-    }
-
-    .contato-nome {
-      font-weight: bold;
-      font-size: 18px;
-      color: #333;
-      font-family: 'Arial', sans-serif;
-    }
-
-    .contato-telefone {
-      font-size: 14px;
-      color: #555;
-    }
-
-    button {
-      padding: 8px 12px;
-      margin-left: 10px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    .editar-btn {
-      background-color: #ffc107;
-    }
-
-    .editar-btn:hover {
-      background-color: #e0a800;
-    }
-
-    input {
-      padding: 8px;
-      margin-right: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-
-    .form-container {
-      margin-top: 20px;
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      align-items: center;
-    }
-
-    footer {
-      background-color: #e0e0e0;
-      padding: 15px 30px;
-      text-align: center;
-      font-size: 14px;
-      color: #555;
-      border-top: 1px solid #ccc;
-    }
-
-    .footer-content {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .footer-content img {
-      height: 40px;
-      object-fit: contain;
-    }
-
-    @media (max-width: 600px) {
-      .footer-content {
-        flex-direction: column;
-        gap: 10px;
-      }
-    }
-
-    .logo-container img {
-      height: 60px;
-      object-fit: contain;
-      display: block;
-      margin: 0 auto;
-    }
-
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Contatos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        td {
+            background-color: #f9f9f9;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-edit {
+            background-color: #ff9800;
+            color: white;
+        }
+        .btn-delete {
+            background-color: #f44336;
+            color: white;
+        }
+        .emergencia {
+            background-color: #f28d8d; /* Vermelho claro para o botão */
+        }
+    </style>
 </head>
 <body>
-  <div class="logo-container">
-    <img src="https://raw.githubusercontent.com/NadrjMV/botcall/main/logo.png" alt="Logo da empresa">
-  </div>
-  
-  <main>
-    <h1>📇 Painel de Contatos SunShield</h1>
-    <ul id="lista-contatos"></ul>
 
-    <div class="form-container">
-      <h2>➕ Adicionar novo contato</h2>
-      <input id="nome" placeholder="Nome">
-      <input id="telefone" placeholder="Telefone (+55...)">
-      <button onclick="adicionarContato()">Salvar</button>
-    </div>
-  </main>
+<div class="container">
+    <h1>Painel de Contatos</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Telefone</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="contactsTable">
+            <!-- Contatos serão carregados aqui -->
+        </tbody>
+    </table>
+</div>
 
-  <footer>
-    <div class="footer-content">
-      <span>© 2025 SunShield — Desenvolvido por <strong>Jordanlvs 💼</strong></span>
-    </div>
-  </footer>
+<script>
+    // Função para carregar os contatos do backend
+    function carregarContatos() {
+        fetch("/get-contacts")
+            .then(response => response.json())
+            .then(data => {
+                let tabelaContatos = document.getElementById("contactsTable");
+                tabelaContatos.innerHTML = "";  // Limpar a tabela antes de preencher
 
-  <script>
-    async function carregarContatos() {
-      const res = await fetch('/get-contacts');
-      const contatos = await res.json();
-      const lista = document.getElementById('lista-contatos');
-      lista.innerHTML = '';
+                // Itera sobre os contatos e adiciona as linhas na tabela
+                for (const nome in data) {
+                    if (data.hasOwnProperty(nome)) {
+                        let telefone = data[nome];
+                        let row = document.createElement("tr");
+                        
+                        // Cria as células da linha
+                        let nomeCell = document.createElement("td");
+                        nomeCell.textContent = nome.charAt(0).toUpperCase() + nome.slice(1); // Capitaliza o nome
+                        
+                        let telefoneCell = document.createElement("td");
+                        telefoneCell.textContent = telefone;
+                        
+                        let acoesCell = document.createElement("td");
+                        let editarBtn = document.createElement("button");
+                        editarBtn.classList.add("btn", "btn-edit");
+                        editarBtn.textContent = "Editar";
+                        editarBtn.onclick = () => editarContato(nome);
 
-      for (const [nome, telefone] of Object.entries(contatos)) {
-        const item = document.createElement('li');
-        const isEmergencia = nome === "emergencia";
-        item.classList.add(isEmergencia ? 'emergencia' : '');
-        item.innerHTML = `
-          <div>
-            <span class="contato-nome">${nome.charAt(0).toUpperCase() + nome.slice(1)}</span>
-            <br>
-            <span class="contato-telefone">${telefone}</span>
-          </div>
-          <div>
-            ${isEmergencia ? `
-              <button class="editar-btn" onclick="editarContato('${nome}')">✏️ Editar</button>
-            ` : `
-              <button onclick="deletarContato('${nome}')">🗑️ Deletar</button>
-            `}
-          </div>
-        `;
-        lista.appendChild(item);
-      }
+                        let deletarBtn = document.createElement("button");
+                        deletarBtn.classList.add("btn", "btn-delete");
+                        deletarBtn.textContent = "Deletar";
+                        deletarBtn.onclick = () => deletarContato(nome);
+
+                        // Para o "emergencia", adiciona a classe de emergência
+                        if (nome === "emergencia") {
+                            editarBtn.disabled = true;  // Desabilitar o botão "Editar"
+                            deletarBtn.disabled = true; // Desabilitar o botão "Deletar"
+                            acoesCell.classList.add("emergencia");
+                        }
+
+                        acoesCell.appendChild(editarBtn);
+                        acoesCell.appendChild(deletarBtn);
+
+                        // Adiciona as células à linha
+                        row.appendChild(nomeCell);
+                        row.appendChild(telefoneCell);
+                        row.appendChild(acoesCell);
+
+                        // Adiciona a linha à tabela
+                        tabelaContatos.appendChild(row);
+                    }
+                }
+            })
+            .catch(error => console.error("Erro ao carregar contatos:", error));
     }
 
-    async function adicionarContato() {
-      const nome = document.getElementById('nome').value;
-      const telefone = document.getElementById('telefone').value;
-      const res = await fetch('/add-contact', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nome, telefone })
-      });
-      const result = await res.json();
-      alert(result.mensagem);
-      carregarContatos();
+    // Função para editar o contato (placeholder)
+    function editarContato(nome) {
+        alert(`Editar: ${nome}`);
+        // Aqui você pode implementar a lógica de edição de contatos
     }
 
-    async function deletarContato(nome) {
-      const confirmar = confirm(`Tem certeza que deseja remover o contato "${nome}"?`);
-      if (!confirmar) return;
-
-      const res = await fetch('/delete-contact', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nome })
-      });
-      const result = await res.json();
-      alert(result.mensagem);
-      carregarContatos();
+    // Função para deletar o contato
+    function deletarContato(nome) {
+        if (confirm(`Tem certeza que deseja deletar o contato ${nome}?`)) {
+            fetch("/delete-contact", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ nome: nome })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "sucesso") {
+                    alert(data.mensagem);
+                    carregarContatos();  // Recarregar a lista após excluir
+                } else {
+                    alert(data.mensagem);
+                }
+            })
+            .catch(error => console.error("Erro ao deletar o contato:", error));
+        }
     }
 
-    async function editarContato(nome) {
-      const novoNome = prompt('Digite o novo nome para o contato:', nome);
-      if (novoNome && novoNome !== nome) {
-        const telefone = prompt('Digite o novo telefone:', ''); // Adiciona aqui se necessário
-        const res = await fetch('/delete-contact', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ nome })
-        });
-        await res.json();
-        await fetch('/add-contact', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ nome: novoNome, telefone })
-        });
-        alert(`Contato "${nome}" alterado para "${novoNome}".`);
-        carregarContatos();
-      }
-    }
+    // Carregar os contatos quando a página for carregada
+    window.onload = carregarContatos;
+</script>
 
-    carregarContatos();
-  </script>
 </body>
 </html>
