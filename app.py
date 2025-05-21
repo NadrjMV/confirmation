@@ -91,7 +91,7 @@ def verifica_sinal():
         numero_emergencia = contatos.get("emergencia")
 
         if numero_emergencia and validar_numero(numero_emergencia):
-            numero_falhou = request.values.get("From", "desconhecido")
+            numero_falhou = request.values.get("To", "desconhecido")
             nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
 
             ligar_para_emergencia(
