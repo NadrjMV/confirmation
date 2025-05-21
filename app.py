@@ -1,5 +1,6 @@
 import os
 import json
+import html
 from flask import Flask, request, Response, jsonify, send_from_directory
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
@@ -98,9 +99,9 @@ def verifica_sinal():
 
 def ligar_para_verificacao(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
     if origem_falha_nome:
-        mensagem = f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato."
+        mensagem = html.escape(f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato.")
     elif origem_falha_numero:
-        mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato."
+        mensagem = html.escape(f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato.")
     else:
         mensagem = "Central de monitoramento?"
 
