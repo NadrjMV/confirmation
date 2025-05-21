@@ -97,7 +97,11 @@ def verifica_sinal():
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
         numero_falhou = request.values.get("To", "desconhecido")
-        nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+        nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), numero_falhou)
+
+        print(f"[FALHA] Número que falhou: {numero_falhou}")
+        print(f"[FALHA] Nome associado: {nome_falhou}")
+        print(f"[FALHA] Emergência: {numero_emergencia}")
 
         if numero_emergencia and validar_numero(numero_emergencia):
             ligar_para_emergencia(numero_emergencia, numero_falhou, nome_falhou)
@@ -113,6 +117,7 @@ def testar_verificacao(nome):
 # LIGAÇÕES
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
+    print(f"[LIGANDO PARA] {numero_destino}")
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
@@ -127,15 +132,14 @@ def ligar_para_verificacao(numero_destino):
     )
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
-    if origem_falha_nome:
+    if origem_falha_nome and origem_falha_nome != origem_falha_numero:
         mensagem = html.escape(f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato.")
     elif origem_falha_numero:
         mensagem = html.escape(f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato.")
     else:
         mensagem = html.escape("Alguém não respondeu à verificação de segurança. Por favor, entre em contato.")
-    print(f"[EMERGÊNCIA] Origem falha nome: {origem_falha_nome}")
-    print(f"[EMERGÊNCIA] Origem falha número: {origem_falha_numero}")
-    print(f"[EMERGÊNCIA] Mensagem: {mensagem}")
+
+    print(f"[EMERGÊNCIA] Ligando para {numero_destino} com mensagem: {mensagem}")
 
     client.calls.create(
         to=numero_destino,
@@ -152,20 +156,24 @@ def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
     numero = contatos.get(nome)
     if numero:
-        print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
+        print(f"[AGENDAMENTO] Ligando para {nome} - {numero}")
         ligar_para_verificacao(numero)
+    else:
+        print(f"[ERRO] Contato '{nome}' não encontrado.")
 
-def _twiml_response(texto, voice="Polly.Camila"):
-    resp = VoiceResponse()
-    resp.say(texto, language="pt-BR", voice=voice)
-    return Response(str(resp), mimetype="text/xml")
+# AJUDA NO SCHEDULER
+def agendar_ligacao_para(nome):
+    def job():
+        print(f"[SCHEDULER] Executando job para {nome}")
+        ligar_para_verificacao_por_nome(nome)
+    return job
 
 # AGENDA
 def agendar_multiplas_ligacoes():
     agendamentos = [
         {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
-        {"nome": "joão do posto 2", "hora": 11, "minuto": 12}, # ligação única
-        {"nome": "joão do posto 2", "hora_inicio": 11, "hora_fim": 13, "minuto": 17}
+        {"nome": "joão do posto 2", "hora": 11, "minuto": 23},
+        {"nome": "joão do posto 2", "hora": 11, "minuto": 26} # ligação única
     ]
     for ag in agendamentos:
         if "hora_inicio" in ag and "hora_fim" in ag:
@@ -173,7 +181,7 @@ def agendar_multiplas_ligacoes():
                 job_id = f"verificacao_{ag['nome']}_{hora}"
                 if not scheduler.get_job(job_id):
                     scheduler.add_job(
-                        lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
+                        agendar_ligacao_para(ag["nome"]),
                         'cron',
                         hour=hora,
                         minute=ag["minuto"],
@@ -183,14 +191,14 @@ def agendar_multiplas_ligacoes():
             job_id = f"verificacao_{ag['nome']}_unica"
             if not scheduler.get_job(job_id):
                 scheduler.add_job(
-                    lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
+                    agendar_ligacao_para(ag["nome"]),
                     'cron',
                     hour=ag["hora"],
                     minute=ag["minuto"],
                     id=job_id
                 )
 
-# CHAMADA
+# INICIAR
 agendar_multiplas_ligacoes()
 scheduler.start()
 
