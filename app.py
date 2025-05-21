@@ -89,7 +89,6 @@ def verifica_sinal():
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
 
-        # Verificando número de emergência antes de tentar fazer a chamada
         if numero_emergencia and validar_numero(numero_emergencia):
             numero_falhou = request.values.get("From", "desconhecido")
             nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
@@ -101,8 +100,7 @@ def verifica_sinal():
             )
             return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
         else:
-            print(f"Erro: número de emergência inválido ou não disponível.")
-            # Aqui o return precisa estar dentro da função
+            print("Erro: número de emergência inválido ou não disponível.")
             return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
 
 def ligar_para_verificacao(numero_destino):
@@ -122,24 +120,10 @@ def ligar_para_verificacao(numero_destino):
 
 def validar_numero(numero):
     try:
-        parsed_number = phonenumbers.parse(numero, "BR")  # 'BR' é o código do país (Brasil)
+        parsed_number = phonenumbers.parse(numero, "BR")
         return is_valid_number(parsed_number)
     except NumberParseException:
         return False
-
-# Adicionando no fluxo de emergência
-if numero_emergencia and validar_numero(numero_emergencia):
-    numero_falhou = request.values.get("From", "desconhecido")
-    nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
-
-    ligar_para_emergencia(
-        numero_destino=numero_emergencia,
-        origem_falha_numero=numero_falhou,
-        origem_falha_nome=nome_falhou
-    )
-else:
-    print(f"Erro: número de emergência inválido ou não disponível.")
-    return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
     if origem_falha_nome:
