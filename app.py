@@ -169,22 +169,28 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "joão do posto 2", "hora": 8, "minuto": 0},
-        {"nome": "gustavo", "hora": 11, "minuto": 0},
-        {"nome": "gustavo", "hora": 12, "minuto": 0},
-        {"nome": "gustavo", "hora": 13, "minuto": 0},
-        {"nome": "gustavo", "hora": 14, "minuto": 0},
-        {"nome": "gustavo", "hora": 15, "minuto": 0},
-        {"nome": "gustavo", "hora": 16, "minuto": 0},
+        {"nome": "gustavo", "hora_inicio": 11, "hora_fim": 18, "minuto": 0},
+#        {"nome": "joão do posto 2", "hora_inicio": 11, "hora_fim": 18, "minuto": 3}, #muda o minuto pra fazer tipo 11:03 ou 18:03
+        {"nome": "João do posto 2", "hora": 10, "minuto": 30}, #ligação única
     ]
     for ag in agendamentos:
-        scheduler.add_job(
-            lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
-            'cron',
-            hour=ag["hora"],
-            minute=ag["minuto"],
-            id=f"verificacao_{ag['nome']}"
-        )
+        for hora in range(ag["hora_inicio"], ag["hora_fim"] + 1):
+            job_id = f"verificacao_{ag['nome']}_{hora}"  # ID único para cada hora
+
+            # Verifica se o job já existe antes de adicionar
+            if not scheduler.get_job(job_id):
+                scheduler.add_job(
+                    lambda nome=ag["nome"], hora=hora: ligar_para_verificacao_por_nome(nome),
+                    'cron',
+                    hour=hora,
+                    minute=ag["minuto"],
+                    id=job_id,
+                    replace_existing=False  # Não substituir jobs
+                )
+                print(f"[AGENDAMENTO] Agendado para {ag['nome']} às {hora}:00")
+
+# Chama a função para agendar os jobs
+agendar_multiplas_ligacoes()
 
 scheduler = BackgroundScheduler()
 agendar_multiplas_ligacoes()
