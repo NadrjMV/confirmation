@@ -133,79 +133,12 @@ def verifica_sinal():
     
     return _twiml_response("Erro ao chamar emergência.")
 
-@app.route("/testar-verificacao/<nome>")
-def testar_verificacao(nome):
-    """Rota para testar a verificação de um contato."""
-    ligar_para_verificacao_por_nome(nome)
-    return f"Ligação de verificação para {nome} iniciada."
-
-@app.route("/testar-emergencia")
-def testar_emergencia():
-    """Rota para testar uma chamada de emergência."""
-    contatos = load_contacts()
-    numero_emergencia = contatos.get("emergencia")
-    if not numero_emergencia or not validar_numero(numero_emergencia):
-        return "Número de emergência inválido.", 400
-    
-    ligar_para_emergencia(numero_emergencia, origem_falha_nome="Teste")
-    return "Ligação de emergência disparada."
-
-# FUNÇÕES DE LIGAÇÕES
-
-def ligar_para_verificacao(numero_destino):
-    """Inicia uma ligação de verificação para o número fornecido."""
-    print(f"[LIGAÇÃO] Iniciando verificação para {numero_destino}")
-    twiml_url = f"{base_url}/verifica-sinal?tentativa=1"
-    try:
-        client.calls.create(
-            to=numero_destino,
-            from_=twilio_number,
-            twiml=f'''
-            <Response>
-                <Gather input="speech" timeout="5" speechTimeout="auto" action="{twiml_url}" method="POST" language="pt-BR">
-                    <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
-                </Gather>
-                <Redirect method="POST">{twiml_url}</Redirect>
-            </Response>
-            '''
-        )
-        print(f"[LIGAÇÃO] Chamada para {numero_destino} iniciada.")
-    except Exception as e:
-        print(f"[ERRO] Falha ao fazer a ligação para {numero_destino}: {e}")
-
-def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
-    """Faz uma ligação para o número de emergência."""
-    if origem_falha_nome:
-        msg = f"{origem_falha_nome} não respondeu à verificação de segurança."
-    elif origem_falha_numero:
-        msg = f"O número {origem_falha_numero} não respondeu à verificação de segurança."
-    else:
-        msg = "Alguém não respondeu à verificação de segurança."
-
-    print(f"[EMERGÊNCIA] Ligando para {numero_destino}: {msg}")
-    twiml = f'''
-    <Response>
-        <Say voice="Polly.Camila" language="pt-BR">{msg}</Say>
-        <Pause length="2"/>
-        <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
-    </Response>
-    '''
-    try:
-        client.calls.create(
-            to=numero_destino,
-            from_=twilio_number,
-            twiml=twiml
-        )
-        print(f"[EMERGÊNCIA] Ligação para {numero_destino} enviada.")
-    except Exception as e:
-        print(f"[ERRO] Falha ao fazer a ligação para {numero_destino}: {e}")
-
 # AGENDAMENTO DE LIGAÇÕES
 
 def agendar_ligacoes():
     """Agendar as ligações de verificação para horários específicos."""
     agendamentos = [
-        {"nome": "jordan", "hora": 8, "minuto": 13},
+        {"nome": "jordan", "hora": 8, "minuto": 15},
     ]
     
     contatos = load_contacts()
@@ -214,3 +147,19 @@ def agendar_ligacoes():
         nome = ag['nome']
         hora = ag['hora']
         minuto = ag['minuto']
+        job = scheduler.add_job(
+            ligar_para_verificacao,
+            'cron',
+            hour=hora,
+            minute=minuto,
+            args=[contatos[nome]]
+        )
+        print(f"Agendado para ligar para {nome} às {hora}:{minuto}.")
+
+# INICIALIZANDO O SCHEDULER E O FLASK
+
+if __name__ == "__main__":
+    agendar_ligacoes()  # Agendar as ligações
+    scheduler.start()  # Iniciar o agendador
+    port = int(os.environ.get("PORT", 5000))  # Usar a porta do ambiente, ou 5000 se não for definida
+    app.run(host="0.0.0.0", port=port)
