@@ -60,12 +60,22 @@ def get_contacts():
 def serve_painel():
     return send_from_directory(".", "painel-contatos.html")
 
-@app.route("/verifica-sinal", methods=["POST"])
+@app.route("/verifica-sinal", methods=["GET", "POST"])
 def verifica_sinal():
+    # Se for uma requisição GET, apenas retorna um teste de resposta (simulando o que seria o SpeechResult)
+    if request.method == "GET":
+        resposta = request.args.get("SpeechResult", "").lower()
+        tentativa = int(request.args.get("tentativa", 1))
+        print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
+        return _handle_verificacao(resposta, tentativa)
+
+    # Se for uma requisição POST, pega o dado de SpeechResult do formulário
     resposta = request.form.get("SpeechResult", "").lower()
     tentativa = int(request.args.get("tentativa", 1))
     print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
+    return _handle_verificacao(resposta, tentativa)
 
+def _handle_verificacao(resposta, tentativa):
     if "protegido" in resposta:
         print("Palavra correta detectada.")
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
@@ -82,7 +92,6 @@ def verifica_sinal():
         )
         gather.say("Contra-senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
-        # Adiciona Redirect mesmo se não houver resposta
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
     else:
@@ -159,10 +168,8 @@ def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
     numero = contatos.get(nome)
     if numero:
-        print(f"[DEBUG] Ligando para {nome} - {numero}")  # Log de chamada
+        print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
         ligar_para_verificacao(numero)
-    else:
-        print(f"[ERROR] Número de {nome} não encontrado.")  # Log de erro
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
@@ -171,15 +178,9 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "verificacao1", "hora": 8, "minuto": 56},
+        {"nome": "verificacao1", "hora": 9, "minuto": 1},
     ]
-    
-    print(f"[DEBUG] Iniciando agendamentos...")  # Log de início de agendamento
-    
     for ag in agendamentos:
-        print(f"[DEBUG] Agendando ligação para {ag['nome']} às {ag['hora']}:{ag['minuto']}")  # Log para cada agendamento
-        
-        # Aqui, vamos adicionar um identificador único para cada agendamento
         scheduler.add_job(
             lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
             'cron',
@@ -187,8 +188,6 @@ def agendar_multiplas_ligacoes():
             minute=ag["minuto"],
             id=f"verificacao_{ag['nome']}"
         )
-    
-    print(f"[DEBUG] Agendamentos realizados.")  # Log de confirmação
 
 scheduler = BackgroundScheduler()
 agendar_multiplas_ligacoes()
