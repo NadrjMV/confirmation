@@ -54,6 +54,23 @@ def _twiml_response(texto, voice="Polly.Camila"):
     resp.say(texto, language="pt-BR", voice=voice)
     return Response(str(resp), mimetype="text/xml")
 
+def ligar_para_verificacao(numero_destino):
+    """Iniciar uma ligação para verificação."""
+    print(f"[LIGAÇÃO] Iniciando verificação para {numero_destino}")
+    twiml_url = f"{base_url}/verifica-sinal?tentativa=1"
+    client.calls.create(
+        to=numero_destino,
+        from_=twilio_number,
+        twiml=f'''
+        <Response>
+            <Gather input="speech" timeout="5" speechTimeout="auto" action="{twiml_url}" method="POST" language="pt-BR">
+                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
+            </Gather>
+            <Redirect method="POST">{twiml_url}</Redirect>
+        </Response>
+        '''
+    )
+
 # ROTEAMENTO FLASK
 
 @app.route("/add-contact", methods=["POST"])
@@ -116,7 +133,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Contra-senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -138,7 +155,7 @@ def verifica_sinal():
 def agendar_ligacoes():
     """Agendar as ligações de verificação para horários específicos."""
     agendamentos = [
-        {"nome": "jordan", "hora": 8, "minuto": 15},
+        {"nome": "jordan", "hora": 8, "minuto": 17},
     ]
     
     contatos = load_contacts()
