@@ -138,7 +138,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Contra-senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -160,8 +160,7 @@ def verifica_sinal():
 def agendar_ligacoes():
     """Agendar as ligações de verificação para horários específicos."""
     agendamentos = [
-        {"nome": "jordan", "hora": 8, "minuto": 17},
-        {"nome": "ana", "hora": 15, "minuto": 30},
+        {"nome": "jordan", "hora": 8, "minuto": 21},
     ]
     
     contatos = load_contacts()
