@@ -8,6 +8,7 @@ from twilio.rest import Client
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
+from datetime import datetime
 
 # CONFIGURAÇÕES INICIAIS
 load_dotenv()
@@ -204,6 +205,12 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
 def agendar_ligacoes():
     """Agendar as ligações de verificação para horários específicos."""
     agendamentos = [
-        {"nome": "jordan", "hora": 8, "minuto": 11},
+        {"nome": "jordan", "hora": 8, "minuto": 13},
     ]
-    for ag in agendamentos
+    
+    contatos = load_contacts()
+
+    for ag in agendamentos:
+        nome = ag['nome']
+        hora = ag['hora']
+        minuto = ag['minuto']
