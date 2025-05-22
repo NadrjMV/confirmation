@@ -169,7 +169,7 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "joão do posto 2", "hora": 8, "minuto": 42},
+        {"nome": "verificacao1", "hora": 8, "minuto": 42},
     ]
     for ag in agendamentos:
         scheduler.add_job(
