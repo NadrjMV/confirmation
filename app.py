@@ -220,8 +220,7 @@ def agendar_multiplas_ligacoes():
 
 def agendar_ligacoes_fixas():
     ligacoes = [
-        {"nome": "verificacao1", "hora": 9, "minuto": 22},
-        {"nome": "verificacao1", "hora": 9, "minuto": 24},
+        {"nome": "fk", "hora": 9, "minuto": 22},
     ]
     for i, item in enumerate(ligacoes):
         scheduler.add_job(
@@ -236,7 +235,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-    "verificacao1": [(9, 46), (9, 48), (9, 52)],
+    "verificacao1": [(10, 00), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
     "verificacao2": [(11, 30)]
 }
 for nome, horarios in ligacoes.items():
