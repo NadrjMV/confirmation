@@ -115,22 +115,27 @@ def _handle_verificacao(resposta, tentativa):
 
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
+    response = VoiceResponse()
+    
+    gather = Gather(
+        input="speech",
+        timeout=5,
+        speechTimeout="auto",
+        action=full_url,
+        method="POST",
+        language="pt-BR"
+    )
+    gather.say("Central de monitoramento?", language="pt-BR", voice="Polly.Camila")
+    response.append(gather)
+    response.redirect(full_url, method="POST")
+
+    print(f"[DEBUG] Enviando TwiML para número {numero_destino}:")
+    print(response.to_xml())
+
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
-        twiml=f'''
-        <Response>
-            <Gather input="speech"
-                    timeout="5"
-                    speechTimeout="auto"
-                    action="{full_url}"
-                    method="POST"
-                    language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
-            </Gather>
-            <Redirect method="POST">{full_url}</Redirect>
-        </Response>
-        '''
+        twiml=response
     )
 
 def validar_numero(numero):
