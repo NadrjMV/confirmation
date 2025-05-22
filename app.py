@@ -9,7 +9,7 @@ from twilio.rest import Client
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
-from pytz import timezone  # ✅ Importa o fuso horário
+from pytz import timezone
 
 load_dotenv()
 app = Flask(__name__)
@@ -92,7 +92,6 @@ def verifica_sinal():
     contatos = load_contacts()
     numero_emergencia = contatos.get("emergencia")
 
-    # 💡 Captura corretamente o número de quem falhou
     numero_falhou = request.values.get("To", None)
     nome_falhou = None
     if numero_falhou:
@@ -146,22 +145,62 @@ def validar_numero(numero):
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
     if origem_falha_nome:
-        mensagem = f"Alerta de verificação de segurança. {origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato."
+        mensagem = f"Alerta de verificação de segurança. {origem_falha_nome} não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
     elif origem_falha_numero:
-        mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato."
+        mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
     else:
-        mensagem = "Alguém não respondeu à verificação de segurança. Por favor, entre em contato."
+        mensagem = "Alguém não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
+
+    full_url = f"{base_url}/verifica-emergencia?tentativa=1"
+    response = VoiceResponse()
+    gather = Gather(
+        input="speech",
+        timeout=5,
+        speechTimeout="auto",
+        action=full_url,
+        method="POST",
+        language="pt-BR"
+    )
+    gather.say(mensagem, language="pt-BR", voice="Polly.Camila")
+    response.append(gather)
+    response.redirect(full_url, method="POST")
 
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
-        twiml=f'''
-        <Response>
-            <Say voice="Polly.Camila" language="pt-BR">{html.escape(mensagem)}</Say>
-            <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
-        </Response>
-        '''
+        twiml=response
     )
+
+@app.route("/verifica-emergencia", methods=["POST"])
+def verifica_emergencia():
+    resposta = request.form.get("SpeechResult", "").lower()
+    tentativa = int(request.args.get("tentativa", 1))
+    print(f"[RESPOSTA EMERGENCIA - Tentativa {tentativa}] {resposta}")
+
+    confirmacoes = ["ok", "confirma", "entendido", "entendi", "obrigado", "valeu"]
+
+    if any(palavra in resposta for palavra in confirmacoes):
+        print("Confirmação recebida do chefe.")
+        return _twiml_response("Confirmação recebida. Obrigado.", voice="Polly.Camila")
+
+    if tentativa < 3:
+        print("Sem confirmação. Repetindo mensagem...")
+        resp = VoiceResponse()
+        gather = Gather(
+            input="speech",
+            timeout=5,
+            speechTimeout="auto",
+            action=f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}",
+            method="POST",
+            language="pt-BR"
+        )
+        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="Polly.Camila")
+        resp.append(gather)
+        resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
+        return Response(str(resp), mimetype="text/xml")
+
+    print("Nenhuma confirmação após múltiplas tentativas.")
+    return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="Polly.Camila")
 
 @app.route("/testar-verificacao/<nome>")
 def testar_verificacao(nome):
@@ -182,7 +221,6 @@ def _twiml_response(texto, voice="Polly.Camila"):
     resp.say(texto, language="pt-BR", voice=voice)
     return Response(str(resp), mimetype="text/xml")
 
-# ✅ Scheduler com fuso horário brasileiro
 scheduler = BackgroundScheduler(timezone=timezone("America/Sao_Paulo"))
 
 @app.route("/agendar-unica", methods=["POST"])
@@ -236,7 +274,7 @@ agendar_ligacoes_fixas()
 
 ligacoes = {
     "gustavo": [(10, 11), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
-    "verificacao1": [(10, 30),(10,34)]
+    "verificacao1": [(10, 30), (10, 34)]
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
@@ -255,3 +293,5 @@ scheduler.start()
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+#created by Jordanlvs 💼, all rights reserved ®
