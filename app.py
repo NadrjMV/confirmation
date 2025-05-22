@@ -171,7 +171,7 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "verificacao1", "hora": 8, "minuto": 52},
+        {"nome": "verificacao1", "hora": 8, "minuto": 56},
     ]
     
     print(f"[DEBUG] Iniciando agendamentos...")  # Log de início de agendamento
