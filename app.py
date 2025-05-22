@@ -160,7 +160,7 @@ def verifica_sinal():
 def agendar_ligacoes():
     """Agendar as ligações de verificação para horários específicos."""
     agendamentos = [
-        {"nome": "jordan", "hora": 8, "minuto": 21},
+        {"nome": "jordan", "hora": 8, "minuto": 25},
     ]
     
     contatos = load_contacts()
