@@ -83,7 +83,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Contra-senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -146,7 +146,7 @@ def validar_numero(numero):
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
     if origem_falha_nome:
-        mensagem = f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato."
+        mensagem = f"Alerta de verificação de segurança. {origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato."
     elif origem_falha_numero:
         mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato."
     else:
@@ -235,8 +235,8 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-    "verificacao1": [(10, 11), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
-    "verificacao2": [(11, 30)]
+    "gustavo": [(10, 11), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
+    "verificacao1": [(10, 26)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
