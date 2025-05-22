@@ -56,20 +56,25 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def ligar_para_verificacao(numero_destino):
     """Iniciar uma ligação para verificação."""
-    print(f"[LIGAÇÃO] Iniciando verificação para {numero_destino}")
+    print(f"[DEBUG] Ligando para {numero_destino}")
     twiml_url = f"{base_url}/verifica-sinal?tentativa=1"
-    client.calls.create(
-        to=numero_destino,
-        from_=twilio_number,
-        twiml=f'''
-        <Response>
-            <Gather input="speech" timeout="5" speechTimeout="auto" action="{twiml_url}" method="POST" language="pt-BR">
-                <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
-            </Gather>
-            <Redirect method="POST">{twiml_url}</Redirect>
-        </Response>
-        '''
-    )
+    
+    try:
+        call = client.calls.create(
+            to=numero_destino,
+            from_=twilio_number,
+            twiml=f'''
+            <Response>
+                <Gather input="speech" timeout="5" speechTimeout="auto" action="{twiml_url}" method="POST" language="pt-BR">
+                    <Say voice="Polly.Camila" language="pt-BR">Central de monitoramento?</Say>
+                </Gather>
+                <Redirect method="POST">{twiml_url}</Redirect>
+            </Response>
+            '''
+        )
+        print(f"[DEBUG] Ligação disparada. Call SID: {call.sid}")
+    except Exception as e:
+        print(f"[ERROR] Erro ao tentar fazer a ligação: {e}")
 
 # ROTEAMENTO FLASK
 
@@ -133,7 +138,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Contra-senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -156,6 +161,7 @@ def agendar_ligacoes():
     """Agendar as ligações de verificação para horários específicos."""
     agendamentos = [
         {"nome": "jordan", "hora": 8, "minuto": 17},
+        {"nome": "ana", "hora": 15, "minuto": 30},
     ]
     
     contatos = load_contacts()
@@ -164,6 +170,8 @@ def agendar_ligacoes():
         nome = ag['nome']
         hora = ag['hora']
         minuto = ag['minuto']
+        print(f"[DEBUG] Agendando ligação para {nome} às {hora}:{minuto}.")
+        
         job = scheduler.add_job(
             ligar_para_verificacao,
             'cron',
@@ -171,7 +179,7 @@ def agendar_ligacoes():
             minute=minuto,
             args=[contatos[nome]]
         )
-        print(f"Agendado para ligar para {nome} às {hora}:{minuto}.")
+        print(f"[DEBUG] Agendado para ligar para {nome} às {hora}:{minuto}.")
 
 # INICIALIZANDO O SCHEDULER E O FLASK
 
