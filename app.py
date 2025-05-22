@@ -6,6 +6,8 @@ from flask import Flask, request, Response, jsonify, send_from_directory
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.memory import MemoryJobStore
 
 # CONFIGURAÇÕES INICIAIS
 load_dotenv()
@@ -19,6 +21,10 @@ CONTACTS_FILE = "contacts.json"
 
 # Instanciando o cliente Twilio
 client = Client(twilio_sid, twilio_token)
+
+# AGENDADOR
+jobstores = {'default': MemoryJobStore()}
+scheduler = BackgroundScheduler(jobstores=jobstores)
 
 # FUNÇÕES AUXILIARES
 def load_contacts():
@@ -189,4 +195,15 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
             from_=twilio_number,
             twiml=twiml
         )
-        print(f"[EMERGÊNCIA]
+        print(f"[EMERGÊNCIA] Ligação para {numero_destino} enviada.")
+    except Exception as e:
+        print(f"[ERRO] Falha ao fazer a ligação para {numero_destino}: {e}")
+
+# AGENDAMENTO DE LIGAÇÕES
+
+def agendar_ligacoes():
+    """Agendar as ligações de verificação para horários específicos."""
+    agendamentos = [
+        {"nome": "jordan", "hora": 8, "minuto": 11},
+    ]
+    for ag in agendamentos
