@@ -159,8 +159,10 @@ def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
     numero = contatos.get(nome)
     if numero:
-        print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
+        print(f"[DEBUG] Ligando para {nome} - {numero}")  # Log de chamada
         ligar_para_verificacao(numero)
+    else:
+        print(f"[ERROR] Número de {nome} não encontrado.")  # Log de erro
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
@@ -169,9 +171,15 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "verificacao1", "hora": 8, "minuto": 46},
+        {"nome": "verificacao1", "hora": 8, "minuto": 52},
     ]
+    
+    print(f"[DEBUG] Iniciando agendamentos...")  # Log de início de agendamento
+    
     for ag in agendamentos:
+        print(f"[DEBUG] Agendando ligação para {ag['nome']} às {ag['hora']}:{ag['minuto']}")  # Log para cada agendamento
+        
+        # Aqui, vamos adicionar um identificador único para cada agendamento
         scheduler.add_job(
             lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
             'cron',
@@ -179,6 +187,8 @@ def agendar_multiplas_ligacoes():
             minute=ag["minuto"],
             id=f"verificacao_{ag['nome']}"
         )
+    
+    print(f"[DEBUG] Agendamentos realizados.")  # Log de confirmação
 
 scheduler = BackgroundScheduler()
 agendar_multiplas_ligacoes()
