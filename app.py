@@ -88,14 +88,24 @@ def verifica_sinal():
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
 
-    print("[FALHA TOTAL] Chamando número de emergência.")
+    print("[FALHA TOTAL] Chamando número de emergência...")
     contatos = load_contacts()
     numero_emergencia = contatos.get("emergencia")
 
-    if numero_emergencia and validar_numero(numero_emergencia):
-        numero_falhou = request.values.get("To", "desconhecido")
-        nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+    # 💡 Captura corretamente o número de quem falhou
+    numero_falhou = request.values.get("To", None)
+    nome_falhou = None
+    if numero_falhou:
+        for nome, tel in contatos.items():
+            if tel == numero_falhou:
+                nome_falhou = nome
+                break
 
+    print(f"[DEBUG] Número que falhou: {numero_falhou}")
+    print(f"[DEBUG] Nome correspondente: {nome_falhou}")
+    print(f"[DEBUG] Número emergência: {numero_emergencia}")
+
+    if numero_emergencia and validar_numero(numero_emergencia):
         ligar_para_emergencia(
             numero_destino=numero_emergencia,
             origem_falha_numero=numero_falhou,
@@ -226,7 +236,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-    "verificacao1": [(9, 37), (9, 39), (9, 42)],
+    "verificacao1": [(9, 46), (9, 48), (9, 52)],
     "verificacao2": [(11, 30)]
 }
 for nome, horarios in ligacoes.items():
