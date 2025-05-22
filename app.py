@@ -8,6 +8,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 
 load_dotenv()
 app = Flask(__name__)
@@ -62,25 +63,18 @@ def serve_painel():
 
 @app.route("/verifica-sinal", methods=["GET", "POST"])
 def verifica_sinal():
-    # Se for uma requisição GET, apenas retorna um teste de resposta (simulando o que seria o SpeechResult)
-    if request.method == "GET":
-        resposta = request.args.get("SpeechResult", "").lower()
-        tentativa = int(request.args.get("tentativa", 1))
-        print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
-        return _handle_verificacao(resposta, tentativa)
-
-    # Se for uma requisição POST, pega o dado de SpeechResult do formulário
-    resposta = request.form.get("SpeechResult", "").lower()
+    resposta = request.values.get("SpeechResult", "").lower()
     tentativa = int(request.args.get("tentativa", 1))
     print(f"[RESPOSTA - Tentativa {tentativa}] {resposta}")
     return _handle_verificacao(resposta, tentativa)
 
 def _handle_verificacao(resposta, tentativa):
     if "protegido" in resposta:
-        print("Palavra correta detectada.")
+        print("[SUCESSO] Palavra correta detectada.")
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
-    elif tentativa < 2:
-        print("Não entendi. Tentando novamente...")
+
+    if tentativa < 2:
+        print("[TENTATIVA FALHOU] Repetindo verificação...")
         resp = VoiceResponse()
         gather = Gather(
             input="speech",
@@ -94,29 +88,23 @@ def _handle_verificacao(resposta, tentativa):
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
+    
+    print("[FALHA TOTAL] Chamando número de emergência.")
+    contatos = load_contacts()
+    numero_emergencia = contatos.get("emergencia")
+
+    if numero_emergencia and validar_numero(numero_emergencia):
+        numero_falhou = request.values.get("To", "desconhecido")
+        nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
+        ligar_para_emergencia(numero_emergencia, numero_falhou, nome_falhou)
+        return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
     else:
-        print("Nenhuma resposta válida. Ligando para emergência.")
-        contatos = load_contacts()
-        numero_emergencia = contatos.get("emergencia")
-
-        if numero_emergencia and validar_numero(numero_emergencia):
-            numero_falhou = request.values.get("To", "desconhecido")
-            nome_falhou = next((nome for nome, tel in contatos.items() if tel == numero_falhou), None)
-
-            ligar_para_emergencia(
-                numero_destino=numero_emergencia,
-                origem_falha_numero=numero_falhou,
-                origem_falha_nome=nome_falhou
-            )
-            return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
-        else:
-            print("Erro: número de emergência inválido ou não disponível.")
-            return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
+        print("[ERRO] Número de emergência não encontrado ou inválido.")
+        return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
 
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
     response = VoiceResponse()
-    
     gather = Gather(
         input="speech",
         timeout=5,
@@ -129,9 +117,6 @@ def ligar_para_verificacao(numero_destino):
     response.append(gather)
     response.redirect(full_url, method="POST")
 
-    print(f"[DEBUG] Enviando TwiML para número {numero_destino}:")
-    print(response.to_xml())
-
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
@@ -140,25 +125,25 @@ def ligar_para_verificacao(numero_destino):
 
 def validar_numero(numero):
     try:
-        parsed_number = phonenumbers.parse(numero, "BR")
-        return is_valid_number(parsed_number)
+        parsed = phonenumbers.parse(numero, "BR")
+        return is_valid_number(parsed)
     except NumberParseException:
         return False
 
 def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
     if origem_falha_nome:
-        mensagem = html.escape(f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato.")
+        mensagem = f"{origem_falha_nome} não respondeu à verificação de segurança. Por favor, entre em contato."
     elif origem_falha_numero:
-        mensagem = html.escape(f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato.")
+        mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, entre em contato."
     else:
-        mensagem = html.escape("Alguém não respondeu à verificação de segurança. Por favor, entre em contato.")
+        mensagem = "Alguém não respondeu à verificação de segurança. Por favor, entre em contato."
 
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
         twiml=f'''
         <Response>
-            <Say voice="Polly.Camila" language="pt-BR">{mensagem}</Say>
+            <Say voice="Polly.Camila" language="pt-BR">{html.escape(mensagem)}</Say>
             <Say voice="Polly.Camila" language="pt-BR">Encerrando ligação.</Say>
         </Response>
         '''
@@ -171,10 +156,12 @@ def testar_verificacao(nome):
 
 def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
-    numero = contatos.get(nome)
-    if numero:
-        print(f"[AGENDAMENTO MANUAL] Ligando para {nome} - {numero}")
+    numero = contatos.get(nome.lower())
+    if numero and validar_numero(numero):
+        print(f"[AGENDAMENTO] Ligando para {nome}: {numero}")
         ligar_para_verificacao(numero)
+    else:
+        print(f"[ERRO] Contato '{nome}' não encontrado ou inválido.")
 
 def _twiml_response(texto, voice="Polly.Camila"):
     resp = VoiceResponse()
@@ -183,20 +170,77 @@ def _twiml_response(texto, voice="Polly.Camila"):
 
 def agendar_multiplas_ligacoes():
     agendamentos = [
-        {"nome": "verificacao1", "hora": 9, "minuto": 6},
+        {"nome": "verificacao1", "hora": datetime.now().hour, "minuto": (datetime.now().minute + 1) % 60},
     ]
     for ag in agendamentos:
         scheduler.add_job(
-            lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
-            'cron',
+            func=lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
+            trigger="cron",
             hour=ag["hora"],
             minute=ag["minuto"],
-            id=f"verificacao_{ag['nome']}"
+            id=f"verificacao_{ag['nome']}",
+            replace_existing=True
         )
 
 scheduler = BackgroundScheduler()
-agendar_multiplas_ligacoes()
+
+@app.route("/agendar-unica", methods=["POST"])
+def agendar_unica():
+    data = request.get_json()
+    nome = data.get("nome")
+    hora = int(data.get("hora"))
+    minuto = int(data.get("minuto"))
+
+    job_id = f"teste_{nome}_{hora}_{minuto}"
+    scheduler.add_job(
+        func=lambda: ligar_para_verificacao_por_nome(nome),
+        trigger="cron",
+        hour=hora,
+        minute=minuto,
+        id=job_id,
+        replace_existing=True
+    )
+
+    return jsonify({"status": "ok", "mensagem": f"Ligação para {nome} agendada às {hora:02d}:{minuto:02d}"})
+
 scheduler.start()
+
+def agendar_ligacoes_fixas():
+    # Defina os contatos e os horários desejados
+    ligacoes = [
+        {"nome": "verificacao1", "hora": 9, "minuto": 22},   # 09:22
+        {"nome": "verificacao1", "hora": 9, "minuto": 24},   # 12:00
+    ]
+
+    for i, item in enumerate(ligacoes):
+        scheduler.add_job(
+            func=lambda nome=item["nome"]: ligar_para_verificacao_por_nome(nome),
+            trigger="cron",
+            hour=item["hora"],
+            minute=item["minuto"],
+            id=f"ligacao_fixa_{i}",
+            replace_existing=True
+        )
+
+agendar_ligacoes_fixas()
+
+ligacoes = {
+    "verificacao1": [(8, 15), (12, 0), (15, 45)],
+    "verificacao2": [(9, 30)]
+}
+
+for nome, horarios in ligacoes.items():
+    for i, (hora, minuto) in enumerate(horarios):
+        scheduler.add_job(
+            func=lambda nome=nome: ligar_para_verificacao_por_nome(nome),
+            trigger="cron",
+            hour=hora,
+            minute=minuto,
+            id=f"{nome}_{hora}_{minuto}",
+            replace_existing=True
+        )
+        
+agendar_multiplas_ligacoes()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
