@@ -120,12 +120,13 @@ def verifica_sinal():
             language="pt-BR"
         )
         # Usando SSML para evitar corte da fala
-        gather.ssml("""
+        gather.say("""
             <speak>
-                Contra senha incorreta. Fale novamente.
+                Mensagem em SSML
                 <break time="1s"/>
             </speak>
-        """)
+        """, ssml=True, voice="Polly.Camila", language="pt-BR")
+
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
