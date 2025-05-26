@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from pytz import timezone
+from collections import deque
 
 load_dotenv()
 app = Flask(__name__)
@@ -21,6 +22,7 @@ base_url = os.getenv("BASE_URL")
 client = Client(twilio_sid, twilio_token)
 
 CONTACTS_FILE = "contacts.json"
+historico_chamadas = deque(maxlen=50)
 
 def load_contacts():
     with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
@@ -29,6 +31,13 @@ def load_contacts():
 def save_contacts(data):
     with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _nome_por_numero(numero):
+    contatos = load_contacts()
+    for nome, tel in contatos.items():
+        if tel == numero:
+            return nome
+    return "desconhecido"
 
 @app.route("/add-contact", methods=["POST"])
 def add_contact():
@@ -62,6 +71,25 @@ def get_contacts():
 def serve_painel():
     return send_from_directory(".", "painel-contatos.html")
 
+@app.route("/painel-dashboard.html")
+def painel_dashboard():
+    return send_from_directory(".", "painel-dashboard.html")
+
+@app.route("/dashboard")
+def dashboard():
+    agendadas = scheduler.get_jobs()
+    return jsonify({
+        "historico": list(historico_chamadas),
+        "agendadas": [
+            {
+                "id": job.id,
+                "nome_funcao": job.name,
+                "proxima_execucao": job.next_run_time.strftime("%d/%m/%Y %H:%M:%S") if job.next_run_time else "N/A"
+            }
+            for job in agendadas
+        ]
+    })
+
 @app.route("/verifica-sinal", methods=["GET", "POST"])
 def verifica_sinal():
     resposta = request.form.get("SpeechResult", "").lower()
@@ -70,6 +98,14 @@ def verifica_sinal():
 
     if "protegido" in resposta:
         print("[SUCESSO] Palavra correta detectada.")
+        numero = request.values.get("To")
+        historico_chamadas.append({
+            "tipo": "verificacao",
+            "numero": numero,
+            "nome": _nome_por_numero(numero),
+            "resultado": "sucesso",
+            "horario": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        })
         return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
 
     if tentativa < 2:
@@ -93,23 +129,18 @@ def verifica_sinal():
     numero_emergencia = contatos.get("emergencia")
 
     numero_falhou = request.values.get("To", None)
-    nome_falhou = None
-    if numero_falhou:
-        for nome, tel in contatos.items():
-            if tel == numero_falhou:
-                nome_falhou = nome
-                break
+    nome_falhou = _nome_por_numero(numero_falhou)
 
-    print(f"[DEBUG] Número que falhou: {numero_falhou}")
-    print(f"[DEBUG] Nome correspondente: {nome_falhou}")
-    print(f"[DEBUG] Número emergência: {numero_emergencia}")
+    historico_chamadas.append({
+        "tipo": "verificacao",
+        "numero": numero_falhou,
+        "nome": nome_falhou,
+        "resultado": "falha",
+        "horario": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    })
 
     if numero_emergencia and validar_numero(numero_emergencia):
-        ligar_para_emergencia(
-            numero_destino=numero_emergencia,
-            origem_falha_numero=numero_falhou,
-            origem_falha_nome=nome_falhou
-        )
+        ligar_para_emergencia(numero_emergencia, numero_falhou, nome_falhou)
         return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
     else:
         print("[ERRO] Número de emergência não encontrado ou inválido.")
@@ -135,6 +166,14 @@ def ligar_para_verificacao(numero_destino):
         from_=twilio_number,
         twiml=response
     )
+
+    historico_chamadas.append({
+        "tipo": "verificacao",
+        "numero": numero_destino,
+        "nome": _nome_por_numero(numero_destino),
+        "resultado": "iniciada",
+        "horario": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    })
 
 def validar_numero(numero):
     try:
@@ -171,20 +210,35 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
         twiml=response
     )
 
+    historico_chamadas.append({
+        "tipo": "emergencia",
+        "numero": numero_destino,
+        "nome": _nome_por_numero(numero_destino),
+        "resultado": "chamada enviada",
+        "horario": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    })
+
 @app.route("/verifica-emergencia", methods=["POST"])
 def verifica_emergencia():
     resposta = request.form.get("SpeechResult", "").lower()
     tentativa = int(request.args.get("tentativa", 1))
     print(f"[RESPOSTA EMERGENCIA - Tentativa {tentativa}] {resposta}")
 
-    confirmacoes = ["ok", "confirma", "entendido", "entendi", "obrigado", "valeu"]
+    numero = request.values.get("To")
+    sucesso = any(p in resposta for p in ["ok", "confirma", "entendido", "entendi", "obrigado", "valeu"])
 
-    if any(palavra in resposta for palavra in confirmacoes):
-        print("Confirmação recebida do chefe.")
+    historico_chamadas.append({
+        "tipo": "emergencia",
+        "numero": numero,
+        "nome": _nome_por_numero(numero),
+        "resultado": "confirmada" if sucesso else "sem resposta",
+        "horario": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    })
+
+    if sucesso:
         return _twiml_response("Confirmação recebida. Obrigado.", voice="Polly.Camila")
 
     if tentativa < 3:
-        print("Sem confirmação. Repetindo mensagem...")
         resp = VoiceResponse()
         gather = Gather(
             input="speech",
@@ -199,7 +253,6 @@ def verifica_emergencia():
         resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
 
-    print("Nenhuma confirmação após múltiplas tentativas.")
     return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="Polly.Camila")
 
 @app.route("/testar-verificacao/<nome>")
@@ -273,7 +326,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-#   "gustavo": [(10, 00), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
+#   "gustavo": [(10, 00), (11, 00), (12, 00)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
@@ -293,4 +346,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
-#created by Jordanlvs 💼, all rights reserved ®
+#created by Jordanlvs 💼, all rights reserved ® 
