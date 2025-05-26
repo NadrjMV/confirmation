@@ -119,7 +119,13 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        # Usando SSML para evitar corte da fala
+        gather.ssml("""
+            <speak>
+                Contra senha incorreta. Fale novamente.
+                <break time="1s"/>
+            </speak>
+        """)
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -157,7 +163,12 @@ def ligar_para_verificacao(numero_destino):
         method="POST",
         language="pt-BR"
     )
-    gather.say("Central de monitoramento?", language="pt-BR", voice="Polly.Camila")
+    gather.ssml("""
+        <speak>
+            Central de monitoramento?
+            <break time="1s"/>
+        </speak>
+    """)
     response.append(gather)
     response.redirect(full_url, method="POST")
 
@@ -200,7 +211,12 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
         method="POST",
         language="pt-BR"
     )
-    gather.say(mensagem, language="pt-BR", voice="Polly.Camila")
+    gather.ssml(f"""
+        <speak>
+            {mensagem}
+            <break time="1s"/>
+        </speak>
+    """)
     response.append(gather)
     response.redirect(full_url, method="POST")
 
@@ -248,7 +264,12 @@ def verifica_emergencia():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="Polly.Camila")
+        gather.ssml("""
+            <speak>
+                Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.
+                <break time="1s"/>
+            </speak>
+        """)
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
