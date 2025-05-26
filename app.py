@@ -1,5 +1,3 @@
-#app.py todo funcional
-
 import os
 import json
 import html
@@ -275,7 +273,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-   "jordan": [(10, 00), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
+#   "jordan": [(10, 00), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
@@ -295,4 +293,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
-#created by Jordanlvs 💼, all rights reserved ®
+#created by Jordanlvs 💼, all rights reserved ® 
