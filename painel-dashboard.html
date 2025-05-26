@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard de Verificações</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f2f2f2; }
+    h2 { margin-top: 40px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+    th { background-color: #ddd; }
+  </style>
+</head>
+<body>
+  <h1>📊 Dashboard de Verificações</h1>
+
+  <h2>Histórico de Ligações</h2>
+  <table id="historico-table">
+    <thead>
+      <tr><th>Tipo</th><th>Nome</th><th>Número</th><th>Resultado</th><th>Horário</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Agendamentos Ativos</h2>
+  <table id="agendadas-table">
+    <thead>
+      <tr><th>ID</th><th>Função</th><th>Próxima Execução</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    fetch("/dashboard")
+      .then(res => res.json())
+      .then(data => {
+        const historico = data.historico;
+        const agendadas = data.agendadas;
+
+        const hBody = document.querySelector("#historico-table tbody");
+        historico.forEach(item => {
+          const row = `<tr>
+            <td>${item.tipo}</td>
+            <td>${item.nome}</td>
+            <td>${item.numero}</td>
+            <td>${item.resultado}</td>
+            <td>${item.horario}</td>
+          </tr>`;
+          hBody.innerHTML += row;
+        });
+
+        const aBody = document.querySelector("#agendadas-table tbody");
+        agendadas.forEach(item => {
+          const row = `<tr>
+            <td>${item.id}</td>
+            <td>${item.nome_funcao}</td>
+            <td>${item.proxima_execucao}</td>
+          </tr>`;
+          aBody.innerHTML += row;
+        });
+      });
+  </script>
+</body>
+</html>
