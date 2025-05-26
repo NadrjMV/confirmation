@@ -70,7 +70,7 @@ def verifica_sinal():
 
     if "protegido" in resposta:
         print("[SUCESSO] Palavra correta detectada.")
-        return _twiml_response("Entendido. Obrigado.", voice="Polly.Camila")
+        return _twiml_response("Entendido. Obrigado.", voice="alice"")
 
     if tentativa < 2:
         print("[TENTATIVA FALHOU] Repetindo verificação...")
@@ -83,7 +83,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="alice"")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -110,10 +110,10 @@ def verifica_sinal():
             origem_falha_numero=numero_falhou,
             origem_falha_nome=nome_falhou
         )
-        return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="Polly.Camila")
+        return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="alice"")
     else:
         print("[ERRO] Número de emergência não encontrado ou inválido.")
-        return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="Polly.Camila")
+        return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice"")
 
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
@@ -126,7 +126,7 @@ def ligar_para_verificacao(numero_destino):
         method="POST",
         language="pt-BR"
     )
-    gather.say("Central de monitoramento?", language="pt-BR", voice="Polly.Camila")
+    gather.say("Central de monitoramento?", language="pt-BR", voice="alice"")
     response.append(gather)
     response.redirect(full_url, method="POST")
 
@@ -161,7 +161,7 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
         method="POST",
         language="pt-BR"
     )
-    gather.say(mensagem, language="pt-BR", voice="Polly.Camila")
+    gather.say(mensagem, language="pt-BR", voice="alice"")
     response.append(gather)
     response.redirect(full_url, method="POST")
 
@@ -181,7 +181,7 @@ def verifica_emergencia():
 
     if any(palavra in resposta for palavra in confirmacoes):
         print("Confirmação recebida do chefe.")
-        return _twiml_response("Confirmação recebida. Obrigado.", voice="Polly.Camila")
+        return _twiml_response("Confirmação recebida. Obrigado.", voice="alice"")
 
     if tentativa < 3:
         print("Sem confirmação. Repetindo mensagem...")
@@ -194,13 +194,13 @@ def verifica_emergencia():
             method="POST",
             language="pt-BR"
         )
-        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="Polly.Camila")
+        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="alice"")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
 
     print("Nenhuma confirmação após múltiplas tentativas.")
-    return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="Polly.Camila")
+    return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice"")
 
 @app.route("/testar-verificacao/<nome>")
 def testar_verificacao(nome):
@@ -216,7 +216,7 @@ def ligar_para_verificacao_por_nome(nome):
     else:
         print(f"[ERRO] Contato '{nome}' não encontrado ou inválido.")
 
-def _twiml_response(texto, voice="Polly.Camila"):
+def _twiml_response(texto, voice="alice""):
     resp = VoiceResponse()
     resp.say(texto, language="pt-BR", voice=voice)
     return Response(str(resp), mimetype="text/xml")
