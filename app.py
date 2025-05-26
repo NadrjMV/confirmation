@@ -119,14 +119,7 @@ def verifica_sinal():
             method="POST",
             language="pt-BR"
         )
-        # Usando SSML para evitar corte da fala
-        gather.say("""
-            <speak>
-                Mensagem em SSML
-                <break time="1s"/>
-            </speak>
-        """, ssml=True, voice="Polly.Camila", language="pt-BR")
-
+        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -155,7 +148,7 @@ def verifica_sinal():
 
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
-    response = VoiceResponse()
+    resp = VoiceResponse()
     gather = Gather(
         input="speech",
         timeout=5,
@@ -164,19 +157,19 @@ def ligar_para_verificacao(numero_destino):
         method="POST",
         language="pt-BR"
     )
-    gather.ssml("""
+    gather.say("""
         <speak>
             Central de monitoramento?
             <break time="1s"/>
         </speak>
-    """)
-    response.append(gather)
-    response.redirect(full_url, method="POST")
+    """, ssml=True, voice="Polly.Camila", language="pt-BR")
+    resp.append(gather)
+    resp.redirect(full_url, method="POST")
 
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
-        twiml=response
+        twiml=resp
     )
 
     historico_chamadas.append({
@@ -203,7 +196,7 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
         mensagem = "Alguém não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
 
     full_url = f"{base_url}/verifica-emergencia?tentativa=1"
-    response = VoiceResponse()
+    resp = VoiceResponse()
     gather = Gather(
         input="speech",
         timeout=5,
@@ -212,19 +205,14 @@ def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha
         method="POST",
         language="pt-BR"
     )
-    gather.ssml(f"""
-        <speak>
-            {mensagem}
-            <break time="1s"/>
-        </speak>
-    """)
-    response.append(gather)
-    response.redirect(full_url, method="POST")
+    gather.say(mensagem, language="pt-BR", voice="Polly.Camila")
+    resp.append(gather)
+    resp.redirect(full_url, method="POST")
 
     client.calls.create(
         to=numero_destino,
         from_=twilio_number,
-        twiml=response
+        twiml=resp
     )
 
     historico_chamadas.append({
@@ -265,12 +253,7 @@ def verifica_emergencia():
             method="POST",
             language="pt-BR"
         )
-        gather.ssml("""
-            <speak>
-                Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.
-                <break time="1s"/>
-            </speak>
-        """)
+        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="Polly.Camila")
         resp.append(gather)
         resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
@@ -315,57 +298,11 @@ def agendar_unica():
         replace_existing=True
     )
 
-    return jsonify({"status": "ok", "mensagem": f"Ligação para {nome} agendada às {hora:02d}:{minuto:02d}"})
-
-def agendar_multiplas_ligacoes():
-    agendamentos = [
-#        {"nome": "verificacao1", "hora": datetime.now().hour, "minuto": (datetime.now().minute + 1) % 60},
-    ]
-    for ag in agendamentos:
-        scheduler.add_job(
-            func=lambda nome=ag["nome"]: ligar_para_verificacao_por_nome(nome),
-            trigger="cron",
-            hour=ag["hora"],
-            minute=ag["minuto"],
-            id=f"verificacao_{ag['nome']}",
-            replace_existing=True
-        )
-
-def agendar_ligacoes_fixas():
-    ligacoes = [
-#        {"nome": "fk", "hora": 9, "minuto": 22},
-    ]
-    for i, item in enumerate(ligacoes):
-        scheduler.add_job(
-            func=lambda nome=item["nome"]: ligar_para_verificacao_por_nome(nome),
-            trigger="cron",
-            hour=item["hora"],
-            minute=item["minuto"],
-            id=f"ligacao_fixa_{i}",
-            replace_existing=True
-        )
-
-agendar_ligacoes_fixas()
-
-ligacoes = {
-   "jordan": [(10, 00), (11, 00), (12, 00)],
-}
-for nome, horarios in ligacoes.items():
-    for i, (hora, minuto) in enumerate(horarios):
-        scheduler.add_job(
-            func=lambda nome=nome: ligar_para_verificacao_por_nome(nome),
-            trigger="cron",
-            hour=hora,
-            minute=minuto,
-            id=f"{nome}_{hora}_{minuto}",
-            replace_existing=True
-        )
-
-agendar_multiplas_ligacoes()
-scheduler.start()
+    return jsonify({"status": "ok", "mensagem": f"Ligação para {nome} agendada às {hora:02d}:{minuto:02d}."})
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    scheduler.start()
+    print("Your service is live 🎉")
+    app.run(debug=True, host="0.0.0.0", port=5000)
 
 #created by Jordanlvs 💼, all rights reserved ® 
