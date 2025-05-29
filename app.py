@@ -167,6 +167,26 @@ def verifica_emergencia():
     print("Nenhuma confirmação após múltiplas tentativas.")
     return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
 
+@app.route("/testar-sms-emergencia")
+def testar_sms_emergencia():
+    # Forca a falha da verificação de segurança
+    nome_falhou = "Gustavo"  # Nome fictício só pra teste
+    resposta = "tal pessoa falhou na verificação"  # Resposta simulada da verificação
+
+    contatos = load_contacts()
+    numero_emergencia = contatos.get("emergencia")
+
+    if numero_emergencia and validar_numero(numero_emergencia):
+        # Chama a função para enviar SMS de emergência
+        enviar_sms_emergencia(
+            numero_destino=numero_emergencia,
+            nome=nome_falhou,
+            respostas_obtidas=resposta
+        )
+        return "SMS de emergência enviado com sucesso!"
+    else:
+        return "Erro: Número de emergência não encontrado ou inválido."
+
 @app.route("/testar-verificacao/<nome>")
 def testar_verificacao(nome):
     ligar_para_verificacao_por_nome(nome)
