@@ -13,7 +13,7 @@ from pytz import timezone
 
 load_dotenv()
 app = Flask(__name__)
- 
+
 twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_NUMBER")
@@ -88,7 +88,7 @@ def verifica_sinal():
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
 
-    print("[FALHA TOTAL] Chamando número de emergência...")
+    print("[FALHA TOTAL] Enviando SMS para emergência...")
     contatos = load_contacts()
     numero_emergencia = contatos.get("emergencia")
 
@@ -105,36 +105,29 @@ def verifica_sinal():
     print(f"[DEBUG] Número emergência: {numero_emergencia}")
 
     if numero_emergencia and validar_numero(numero_emergencia):
-        ligar_para_emergencia(
+        respostas_obtidas = resposta  # Resposta obtida durante a verificação
+        enviar_sms_emergencia(
             numero_destino=numero_emergencia,
-            origem_falha_numero=numero_falhou,
-            origem_falha_nome=nome_falhou
+            nome=nome_falhou,
+            respostas_obtidas=respostas_obtidas
         )
-        return _twiml_response("Falha na confirmação. Chamando responsáveis.", voice="alice")
+        return _twiml_response("Falha na confirmação. Mensagem de emergência enviada.", voice="alice")
     else:
         print("[ERRO] Número de emergência não encontrado ou inválido.")
         return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
 
-def ligar_para_verificacao(numero_destino):
-    full_url = f"{base_url}/verifica-sinal?tentativa=1"
-    response = VoiceResponse()
-    gather = Gather(
-        input="speech",
-        timeout=5,
-        speechTimeout="auto",
-        action=full_url,
-        method="POST",
-        language="pt-BR"
+# Função para enviar SMS de emergência
+def enviar_sms_emergencia(numero_destino, nome, respostas_obtidas):
+    mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
+    
+    # Usando a API Twilio para enviar o SMS
+    client = Client(twilio_sid, twilio_token)
+    message = client.messages.create(
+        body=mensagem,  # Mensagem personalizada
+        from_=twilio_number,  # Número Twilio configurado
+        to=numero_destino  # Número de emergência
     )
-    gather.say("Central de monitoramento?", language="pt-BR", voice="alice")
-    response.append(gather)
-    response.redirect(full_url, method="POST")
-
-    client.calls.create(
-        to=numero_destino,
-        from_=twilio_number,
-        twiml=response
-    )
+    print(f"Mensagem enviada para {numero_destino}: {mensagem}")
 
 def validar_numero(numero):
     try:
@@ -142,34 +135,6 @@ def validar_numero(numero):
         return is_valid_number(parsed)
     except NumberParseException:
         return False
-
-def ligar_para_emergencia(numero_destino, origem_falha_numero=None, origem_falha_nome=None):
-    if origem_falha_nome:
-        mensagem = f"Alerta de verificação de segurança. {origem_falha_nome} não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
-    elif origem_falha_numero:
-        mensagem = f"O número {origem_falha_numero} não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
-    else:
-        mensagem = "Alguém não respondeu à verificação de segurança. Por favor, confirme dizendo OK ou Entendido."
-
-    full_url = f"{base_url}/verifica-emergencia?tentativa=1"
-    response = VoiceResponse()
-    gather = Gather(
-        input="speech",
-        timeout=5,
-        speechTimeout="auto",
-        action=full_url,
-        method="POST",
-        language="pt-BR"
-    )
-    gather.say(mensagem, language="pt-BR", voice="alice")
-    response.append(gather)
-    response.redirect(full_url, method="POST")
-
-    client.calls.create(
-        to=numero_destino,
-        from_=twilio_number,
-        twiml=response
-    )
 
 @app.route("/verifica-emergencia", methods=["POST"])
 def verifica_emergencia():
@@ -258,7 +223,7 @@ def agendar_multiplas_ligacoes():
 
 def agendar_ligacoes_fixas():
     ligacoes = [
-        {"nome": "fk", "hora": 9, "minuto": 22},
+#       {"nome": "fk", "hora": 9, "minuto": 22},
     ]
     for i, item in enumerate(ligacoes):
         scheduler.add_job(
@@ -293,4 +258,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
-#created by Jordanlvs 💼, all rights reserved ® 
+#created by Jordanlvs 💼, all rights reserved ®
