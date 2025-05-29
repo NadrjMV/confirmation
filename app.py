@@ -7,6 +7,8 @@ from flask import Flask, request, Response, jsonify, send_from_directory
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
 from dotenv import load_dotenv
+import sendgrid
+from sendgrid.helpers.mail import Mail, Email, To, Content
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from pytz import timezone
@@ -19,6 +21,9 @@ twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_NUMBER")
 base_url = os.getenv("BASE_URL")
 client = Client(twilio_sid, twilio_token)
+
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
 
 CONTACTS_FILE = "contacts.json"
 
@@ -88,47 +93,53 @@ def verifica_sinal():
         resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
         return Response(str(resp), mimetype="text/xml")
 
-    print("[FALHA TOTAL] Enviando SMS para emergência...")
+    print("[FALHA TOTAL] Enviando e-mail para emergência...")
     contatos = load_contacts()
     numero_emergencia = contatos.get("emergencia")
+    email_emergencia = contatos.get("email_emergencia")
 
-    numero_falhou = request.values.get("To", None)
     nome_falhou = None
-    if numero_falhou:
+    if numero_emergencia:
         for nome, tel in contatos.items():
-            if tel == numero_falhou:
+            if tel == numero_emergencia:
                 nome_falhou = nome
                 break
 
-    print(f"[DEBUG] Número que falhou: {numero_falhou}")
+    print(f"[DEBUG] Número que falhou: {numero_emergencia}")
     print(f"[DEBUG] Nome correspondente: {nome_falhou}")
-    print(f"[DEBUG] Número emergência: {numero_emergencia}")
+    print(f"[DEBUG] E-mail emergência: {email_emergencia}")
 
-    if numero_emergencia and validar_numero(numero_emergencia):
+    if email_emergencia:
         respostas_obtidas = resposta  # Resposta obtida durante a verificação
-        enviar_sms_emergencia(
-            numero_destino=numero_emergencia,
+        enviar_email_emergencia(
+            email_destino=email_emergencia,
             nome=nome_falhou,
             respostas_obtidas=respostas_obtidas
         )
-        return _twiml_response("Falha na confirmação. Mensagem de emergência enviada.", voice="alice")
+        return _twiml_response("Falha na confirmação. Mensagem de emergência enviada por e-mail.", voice="alice")
     else:
-        print("[ERRO] Número de emergência não encontrado ou inválido.")
+        print("[ERRO] E-mail de emergência não encontrado ou inválido.")
         return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
 
-# enviar SMS de emergência
-def enviar_sms_emergencia(numero_destino, nome, respostas_obtidas):
+# enviar E-mail de emergência usando SendGrid
+def enviar_email_emergencia(email_destino, nome, respostas_obtidas):
     # Remover acentuação da mensagem para evitar UCS2
-    mensagem = f"Verificacao do {nome} nao correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
+    mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
 
-    # Usando a API Twilio para enviar o SMS
-    client = Client(twilio_sid, twilio_token)
-    message = client.messages.create(
-        body=mensagem,  # Mensagem simplificada
-        from_=twilio_number,  # Número Twilio configurado
-        to=numero_destino  # Número de emergência
-    )
-    print(f"Mensagem enviada para {numero_destino}: {mensagem}")
+    # Usando SendGrid para enviar o e-mail
+    from_email = Email("no-reply@seu-dominio.com")
+    to_email = To(email_destino)
+    subject = "Alerta de Verificação de Segurança"
+    content = Content("text/plain", mensagem)
+
+    mail = Mail(from_email, to_email, subject, content)
+    
+    try:
+        response = sg.send(mail)
+        print(f"Email enviado para {email_destino}: {mensagem}")
+        return response
+    except Exception as e:
+        print(f"[ERRO] Falha ao enviar o e-mail: {str(e)}")
 
 def validar_numero(numero):
     try:
@@ -168,25 +179,25 @@ def verifica_emergencia():
     print("Nenhuma confirmação após múltiplas tentativas.")
     return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
 
-@app.route("/testar-sms-emergencia")
-def testar_sms_emergencia():
-    # Forca a falha da verificação de segurança
-    nome_falhou = "Gustavo"  # Nome fictício só pra teste
+@app.route("/testar-email-emergencia")
+def testar_email_emergencia():
+    # Força a falha da verificação de segurança
+    nome_falhou = "Gustavo"  # Nome fictício só para teste
     resposta = "falha na verificacao"  # Resposta simulada da verificação
 
     contatos = load_contacts()
-    numero_emergencia = contatos.get("emergencia")
+    email_emergencia = contatos.get("email_emergencia")
 
-    if numero_emergencia and validar_numero(numero_emergencia):
-        # Chama a função para enviar SMS de emergência
-        enviar_sms_emergencia(
-            numero_destino=numero_emergencia,
+    if email_emergencia:
+        # Chama a função para enviar e-mail de emergência
+        enviar_email_emergencia(
+            email_destino=email_emergencia,
             nome=nome_falhou,
             respostas_obtidas=resposta
         )
-        return "SMS de emergência enviado com sucesso!"
+        return "E-mail de emergência enviado com sucesso!"
     else:
-        return "Erro: Número de emergência não encontrado ou inválido."
+        return "Erro: E-mail de emergência não encontrado ou inválido."
 
 @app.route("/testar-verificacao/<nome>")
 def testar_verificacao(nome):
