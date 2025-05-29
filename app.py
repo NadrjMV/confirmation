@@ -198,6 +198,30 @@ def testar_verificacao(nome):
     ligar_para_verificacao_por_nome(nome)
     return f"Ligação de verificação para {nome} iniciada."
 
+def ligar_para_verificacao(numero_destino):
+    full_url = f"{base_url}/verifica-sinal?tentativa=1"
+    print(f"[LIGANDO] Iniciando ligação para verificação no número: {numero_destino}")
+    
+    response = VoiceResponse()
+    gather = Gather(
+        input="speech",
+        timeout=5,
+        speechTimeout="auto",
+        action=full_url,
+        method="POST",
+        language="pt-BR"
+    )
+    gather.say("Central de monitoramento?", language="pt-BR", voice="alice")
+    response.append(gather)
+    response.redirect(full_url, method="POST")
+
+    call = client.calls.create(
+        to=numero_destino,
+        from_=twilio_number,
+        twiml=response
+    )
+    print(f"[LIGAÇÃO INICIADA] SID da chamada: {call.sid}")
+
 def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
     numero = contatos.get(nome.lower())
