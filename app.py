@@ -7,8 +7,8 @@ from flask import Flask, request, Response, jsonify, send_from_directory
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from twilio.rest import Client
 from dotenv import load_dotenv
-import sendgrid
-from sendgrid.helpers.mail import Mail, Email, To, Content
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from pytz import timezone
@@ -23,7 +23,7 @@ base_url = os.getenv("BASE_URL")
 client = Client(twilio_sid, twilio_token)
 
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+sg = SendGridAPIClient(SENDGRID_API_KEY)
 
 CONTACTS_FILE = "contacts.json"
 
@@ -121,19 +121,15 @@ def verifica_sinal():
         print("[ERRO] E-mail de emergência não encontrado ou inválido.")
         return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
 
-# enviar E-mail de emergência usando SendGrid
 def enviar_email_emergencia(email_destino, nome, respostas_obtidas):
-    # Remover acentuação da mensagem para evitar UCS2
     mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
 
-    # Usando SendGrid para enviar o e-mail
-    from_email = Email("no-reply@seu-dominio.com")
-    to_email = To(email_destino)
-    subject = "Alerta de Verificação de Segurança"
-    content = Content("text/plain", mensagem)
-
-    mail = Mail(from_email, to_email, subject, content)
-    
+    mail = Mail(
+        from_email="desenvolvimento@sunshield.com.br",
+        to_emails=email_destino,
+        subject="Alerta de Verificação de Segurança",
+        plain_text_content=mensagem
+    )
     try:
         response = sg.send(mail)
         print(f"Email enviado para {email_destino}: {mensagem}")
@@ -181,15 +177,13 @@ def verifica_emergencia():
 
 @app.route("/testar-email-emergencia")
 def testar_email_emergencia():
-    # Força a falha da verificação de segurança
-    nome_falhou = "Gustavo"  # Nome fictício só para teste
-    resposta = "falha na verificacao"  # Resposta simulada da verificação
+    nome_falhou = "Gustavo"
+    resposta = "falha na verificacao"
 
     contatos = load_contacts()
     email_emergencia = contatos.get("email_emergencia")
 
     if email_emergencia:
-        # Chama a função para enviar e-mail de emergência
         enviar_email_emergencia(
             email_destino=email_emergencia,
             nome=nome_falhou,
