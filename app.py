@@ -116,14 +116,15 @@ def verifica_sinal():
         print("[ERRO] Número de emergência não encontrado ou inválido.")
         return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
 
-# Função para enviar SMS de emergência
+# enviar SMS de emergência
 def enviar_sms_emergencia(numero_destino, nome, respostas_obtidas):
-    mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
-    
+    # Remover acentuação da mensagem para evitar UCS2
+    mensagem = f"Verificacao do {nome} nao correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
+
     # Usando a API Twilio para enviar o SMS
     client = Client(twilio_sid, twilio_token)
     message = client.messages.create(
-        body=mensagem,  # Mensagem personalizada
+        body=mensagem,  # Mensagem simplificada
         from_=twilio_number,  # Número Twilio configurado
         to=numero_destino  # Número de emergência
     )
@@ -171,7 +172,7 @@ def verifica_emergencia():
 def testar_sms_emergencia():
     # Forca a falha da verificação de segurança
     nome_falhou = "Gustavo"  # Nome fictício só pra teste
-    resposta = "tal pessoa falhou na verificação"  # Resposta simulada da verificação
+    resposta = "falha na verificacao"  # Resposta simulada da verificação
 
     contatos = load_contacts()
     numero_emergencia = contatos.get("emergencia")
