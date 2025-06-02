@@ -218,7 +218,9 @@ def ligar_para_verificacao(numero_destino):
     call = client.calls.create(
         to=numero_destino,
         from_=twilio_number,
-        twiml=response
+        twiml=response,
+        status_callback=f"{base_url}/status-call?numero_destino={numero_destino}",
+        status_callback_method="POST"
     )
     print(f"[LIGAÇÃO INICIADA] SID da chamada: {call.sid}")
 
@@ -230,6 +232,21 @@ def ligar_para_verificacao_por_nome(nome):
         ligar_para_verificacao(numero)
     else:
         print(f"[ERRO] Contato '{nome}' não encontrado ou inválido.")
+
+@app.route("/status-call", methods=["POST"])
+def status_call():
+    status = request.form.get("CallStatus")
+    numero_destino = request.args.get("numero_destino")
+    if status == "no-answer":
+        print(f"[LIGAÇÃO NÃO ATENDIDA] {numero_destino} não atendeu a chamada.")
+        # Chamar o número de emergência
+        contatos = load_contacts()
+        numero_emergencia = contatos.get("emergencia")
+        if numero_emergencia:
+            print(f"[LIGAÇÃO EMERGENCIA] Ligando para o número de emergência: {numero_emergencia}")
+            ligar_para_verificacao(numero_emergencia)
+        return _twiml_response(f"{numero_destino} não atendeu a ligação. Emergência acionada.")
+    return "", 200
 
 def _twiml_response(texto, voice="alice"):
     resp = VoiceResponse()
@@ -308,4 +325,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
-#created by Jordanlvs 💼, all rights reserved ®
+# created by Jordanlvs 💼, all rights reserved ®
