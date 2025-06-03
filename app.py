@@ -288,7 +288,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-   "jordan": [(11, 50), (11, 55)],
+   "jordan": [(11, 55), (11, 59)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
@@ -300,6 +300,48 @@ for nome, horarios in ligacoes.items():
             id=f"{nome}_{hora}_{minuto}",
             replace_existing=True
         )
+
+agendamentos = {}
+
+@app.route('/add-schedule', methods=['POST'])
+def add_schedule():
+    data = request.json
+    nome = data['nome']
+    horarios = data['horarios']  # lista de strings 'HH:MM'
+
+    agendamentos[nome] = []
+    for h in horarios:
+        hora, minuto = map(int, h.split(':'))
+        agendamentos[nome].append((hora, minuto))
+        scheduler.add_job(
+            func=lambda nome=nome: ligar_para_verificacao_por_nome(nome),
+            trigger="cron",
+            hour=hora,
+            minute=minuto,
+            id=f"{nome}_{hora}_{minuto}",
+            replace_existing=True
+        )
+    return jsonify({'mensagem': f'Agendamento criado para {nome}.'})
+
+@app.route('/get-schedules')
+def get_schedules():
+    formatted = {nome: [f"{h:02d}:{m:02d}" for h, m in horarios] for nome, horarios in agendamentos.items()}
+    return jsonify(formatted)
+
+@app.route('/delete-schedule', methods=['POST'])
+def delete_schedule():
+    data = request.json
+    nome = data['nome']
+    if nome in agendamentos:
+        for hora, minuto in agendamentos[nome]:
+            job_id = f"{nome}_{hora}_{minuto}"
+            try:
+                scheduler.remove_job(job_id)
+            except Exception:
+                pass
+        del agendamentos[nome]
+        return jsonify({'mensagem': f'Agendamento de {nome} removido.'})
+    return jsonify({'mensagem': 'Agendamento não encontrado.'}), 404
 
 agendar_multiplas_ligacoes()
 scheduler.start()
