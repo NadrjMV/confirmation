@@ -201,7 +201,7 @@ def testar_verificacao(nome):
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
     print(f"[LIGANDO] Iniciando ligação para verificação no número: {numero_destino}")
-
+    
     response = VoiceResponse()
     gather = Gather(
         input="speech",
@@ -218,11 +218,7 @@ def ligar_para_verificacao(numero_destino):
     call = client.calls.create(
         to=numero_destino,
         from_=twilio_number,
-        twiml=response,
-        machine_detection="DetectMessageEnd",  # Detecta secretária eletrônica
-        status_callback=f"{base_url}/status-call?numero_destino={numero_destino}",
-        status_callback_event=["answered", "completed", "no-answer", "busy", "failed"],
-        status_callback_method="POST"
+        twiml=response
     )
     print(f"[LIGAÇÃO INICIADA] SID da chamada: {call.sid}")
 
@@ -234,38 +230,6 @@ def ligar_para_verificacao_por_nome(nome):
         ligar_para_verificacao(numero)
     else:
         print(f"[ERRO] Contato '{nome}' não encontrado ou inválido.")
-
-@app.route("/status-call", methods=["POST"])
-def status_call():
-    status = request.form.get("CallStatus")
-    answered_by = request.form.get("AnsweredBy")  # voicemail ou human
-    numero_destino = request.args.get("numero_destino")
-
-    print(f"[STATUS] {status}, [RESPONDIDO POR] {answered_by}")
-
-    if answered_by == "machine":
-        print(f"[ENCERRANDO] Secretária eletrônica detectada no número {numero_destino}.")
-        return Response("", status=204)
-
-    if status == "no-answer":
-        print(f"[LIGAÇÃO NÃO ATENDIDA] {numero_destino} não atendeu a chamada.")
-        contatos = load_contacts()
-        numero_emergencia = contatos.get("emergencia")
-        email_emergencia = contatos.get("email_emergencia")
-
-        if email_emergencia:
-            enviar_email_emergencia(
-                email_destino=email_emergencia,
-                nome="Contato não atendeu",
-                respostas_obtidas="Ligação não atendida"
-            )
-            print("[EMAIL] Enviado aviso de não atendimento.")
-        if numero_emergencia:
-            print(f"[LIGAÇÃO EMERGENCIA] Ligando para o número de emergência: {numero_emergencia}")
-            ligar_para_verificacao(numero_emergencia)
-        return _twiml_response(f"{numero_destino} não atendeu a ligação. Emergência acionada.")
-
-    return "", 200
 
 def _twiml_response(texto, voice="alice"):
     resp = VoiceResponse()
@@ -324,7 +288,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-   "jordan": [(11, 10), (11, 20), (11, 30), (11, 40), (11, 50)],
+   "jordan": [(11, 15), (11, 20), (11, 30), (11, 40)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
@@ -344,4 +308,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
-# Created by Jordanlvs 💼, all rights reserved ® 
+#created by Jordanlvs 💼, all rights reserved ®
