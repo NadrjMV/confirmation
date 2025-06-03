@@ -18,7 +18,15 @@ app = Flask(__name__)
 zenvia_token = os.getenv("ZENVIA_API_TOKEN")
 zenvia_from = os.getenv("ZENVIA_FROM")  # exemplo: "551151168291"
 base_url = os.getenv("BASE_URL")
-url = 'https://voice.api.zenvia.com/v2/calls'
+url = "https://api.zenvia.com/v2/calls"
+headers = {
+    "X-API-TOKEN": "010f196e758a46972b57cf47964f227a",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.status_code)
+print(response.json())
 
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 sg = SendGridAPIClient(SENDGRID_API_KEY)
