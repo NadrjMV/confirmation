@@ -24,7 +24,7 @@ headers = {
     "Content-Type": "application/json"
 }
 
-response = requests.post(url, headers=headers, json=payload)
+response = requests.post(url, headers=headers)
 print(response.status_code)
 print(response.json())
 
