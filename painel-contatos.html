@@ -220,5 +220,74 @@
 
     carregarContatos();
   </script>
+
+<h2>📅 Agendar Ligações</h2>
+<div class="form-container">
+  <select id="agendamento-nome"></select>
+  <input id="horarios" placeholder="Horários (ex: 11:50,12:30)">
+  <button onclick="adicionarAgendamento()">Agendar</button>
+</div>
+
+<ul id="lista-agendamentos"></ul>
+
+<script>
+  async function carregarContatosParaAgendamento() {
+    const res = await fetch('/get-contacts');
+    const contatos = await res.json();
+    const select = document.getElementById('agendamento-nome');
+    select.innerHTML = '';
+    for (const nome in contatos) {
+      const option = document.createElement('option');
+      option.value = nome;
+      option.textContent = nome;
+      select.appendChild(option);
+    }
+  }
+
+  async function carregarAgendamentos() {
+    const res = await fetch('/get-schedules');
+    const agendamentos = await res.json();
+    const lista = document.getElementById('lista-agendamentos');
+    lista.innerHTML = '';
+    for (const [nome, horarios] of Object.entries(agendamentos)) {
+      const item = document.createElement('li');
+      item.innerHTML = `<strong>${nome}</strong>: ${horarios.join(", ")} 
+        <button onclick="deletarAgendamento('${nome}')">🗑️ Deletar</button>`;
+      lista.appendChild(item);
+    }
+  }
+
+  async function adicionarAgendamento() {
+    const nome = document.getElementById('agendamento-nome').value;
+    const horariosStr = document.getElementById('horarios').value;
+    const horarios = horariosStr.split(',').map(h => h.trim());
+
+    const res = await fetch('/add-schedule', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nome, horarios })
+    });
+    const result = await res.json();
+    alert(result.mensagem);
+    carregarAgendamentos();
+  }
+
+  async function deletarAgendamento(nome) {
+    const confirmar = confirm(`Deseja remover o agendamento de ${nome}?`);
+    if (!confirmar) return;
+    const res = await fetch('/delete-schedule', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nome })
+    });
+    const result = await res.json();
+    alert(result.mensagem);
+    carregarAgendamentos();
+  }
+
+  carregarContatosParaAgendamento();
+  carregarAgendamentos();
+</script>
+  
 </body>
 </html>
