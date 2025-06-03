@@ -4,8 +4,7 @@ import html
 import phonenumbers
 from phonenumbers import NumberParseException, is_valid_number
 from flask import Flask, request, Response, jsonify, send_from_directory
-from twilio.twiml.voice_response import VoiceResponse, Gather
-from twilio.rest import Client
+import requests
 from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -16,11 +15,9 @@ from pytz import timezone
 load_dotenv()
 app = Flask(__name__)
 
-twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
-twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-twilio_number = os.getenv("TWILIO_NUMBER")
+zenvia_token = os.getenv("ZENVIA_API_TOKEN")
+zenvia_from = os.getenv("ZENVIA_FROM")  # exemplo: "551151168291"
 base_url = os.getenv("BASE_URL")
-client = Client(twilio_sid, twilio_token)
 
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 sg = SendGridAPIClient(SENDGRID_API_KEY)
@@ -40,7 +37,6 @@ def add_contact():
     data = request.get_json()
     nome = data.get("nome", "").lower()
     telefone = data.get("telefone")
-
     contacts = load_contacts()
     contacts[nome] = telefone
     save_contacts(contacts)
@@ -50,7 +46,6 @@ def add_contact():
 def delete_contact():
     data = request.get_json()
     nome = data.get("nome", "").lower()
-
     contacts = load_contacts()
     if nome in contacts:
         del contacts[nome]
@@ -75,23 +70,11 @@ def verifica_sinal():
 
     if "protegido" in resposta:
         print("[SUCESSO] Palavra correta detectada.")
-        return _twiml_response("Entendido. Obrigado.", voice="alice")
+        return jsonify({"message": "Entendido. Obrigado."})
 
     if tentativa < 2:
         print("[TENTATIVA FALHOU] Repetindo verificação...")
-        resp = VoiceResponse()
-        gather = Gather(
-            input="speech",
-            timeout=5,
-            speechTimeout="auto",
-            action=f"{base_url}/verifica-sinal?tentativa={tentativa + 1}",
-            method="POST",
-            language="pt-BR"
-        )
-        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="alice")
-        resp.append(gather)
-        resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
-        return Response(str(resp), mimetype="text/xml")
+        return jsonify({"message": "Contra senha incorreta. Fale novamente."})
 
     print("[FALHA TOTAL] Enviando e-mail para emergência...")
     contatos = load_contacts()
@@ -110,20 +93,15 @@ def verifica_sinal():
     print(f"[DEBUG] E-mail emergência: {email_emergencia}")
 
     if email_emergencia:
-        respostas_obtidas = resposta  # Resposta obtida durante a verificação
-        enviar_email_emergencia(
-            email_destino=email_emergencia,
-            nome=nome_falhou,
-            respostas_obtidas=respostas_obtidas
-        )
-        return _twiml_response("Falha na confirmação. Mensagem de emergência enviada por e-mail.", voice="alice")
+        respostas_obtidas = resposta
+        enviar_email_emergencia(email_emergencia, nome_falhou, respostas_obtidas)
+        return jsonify({"message": "Falha na confirmação. Mensagem de emergência enviada por e-mail."})
     else:
         print("[ERRO] E-mail de emergência não encontrado ou inválido.")
-        return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
+        return jsonify({"message": "Erro ao tentar contatar emergência. Verifique os números cadastrados."})
 
 def enviar_email_emergencia(email_destino, nome, respostas_obtidas):
     mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
-
     mail = Mail(
         from_email="desenvolvimento@sunshield.com.br",
         to_emails=email_destino,
@@ -154,41 +132,23 @@ def verifica_emergencia():
 
     if any(palavra in resposta for palavra in confirmacoes):
         print("Confirmação recebida do chefe.")
-        return _twiml_response("Confirmação recebida. Obrigado.", voice="alice")
+        return jsonify({"message": "Confirmação recebida. Obrigado."})
 
     if tentativa < 3:
         print("Sem confirmação. Repetindo mensagem...")
-        resp = VoiceResponse()
-        gather = Gather(
-            input="speech",
-            timeout=5,
-            speechTimeout="auto",
-            action=f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}",
-            method="POST",
-            language="pt-BR"
-        )
-        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="alice")
-        resp.append(gather)
-        resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
-        return Response(str(resp), mimetype="text/xml")
+        return jsonify({"message": "Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido."})
 
     print("Nenhuma confirmação após múltiplas tentativas.")
-    return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
+    return jsonify({"message": "Nenhuma confirmação recebida. Encerrando a chamada."})
 
 @app.route("/testar-email-emergencia")
 def testar_email_emergencia():
     nome_falhou = "Gustavo"
     resposta = "falha na verificacao"
-
     contatos = load_contacts()
     email_emergencia = contatos.get("email_emergencia")
-
     if email_emergencia:
-        enviar_email_emergencia(
-            email_destino=email_emergencia,
-            nome=nome_falhou,
-            respostas_obtidas=resposta
-        )
+        enviar_email_emergencia(email_emergencia, nome_falhou, resposta)
         return "E-mail de emergência enviado com sucesso!"
     else:
         return "Erro: E-mail de emergência não encontrado ou inválido."
@@ -199,32 +159,19 @@ def testar_verificacao(nome):
     return f"Ligação de verificação para {nome} iniciada."
 
 def ligar_para_verificacao(numero_destino):
-    full_url = f"{base_url}/verifica-sinal?tentativa=1"
-    print(f"[LIGANDO] Iniciando ligação para verificação no número: {numero_destino}")
-
-    response = VoiceResponse()
-    gather = Gather(
-        input="speech",
-        timeout=5,
-        speechTimeout="auto",
-        action=full_url,
-        method="POST",
-        language="pt-BR"
-    )
-    gather.say("Central de monitoramento?", language="pt-BR", voice="alice")
-    response.append(gather)
-    response.redirect(full_url, method="POST")
-
-    call = client.calls.create(
-        to=numero_destino,
-        from_=twilio_number,
-        twiml=response,
-        machine_detection="DetectMessageEnd",  # Detecta secretária eletrônica
-        status_callback=f"{base_url}/status-call?numero_destino={numero_destino}",
-        status_callback_event=["answered", "completed", "no-answer", "busy", "failed"],
-        status_callback_method="POST"
-    )
-    print(f"[LIGAÇÃO INICIADA] SID da chamada: {call.sid}")
+    print(f"[LIGANDO] Iniciando ligação via Zenvia para: {numero_destino}")
+    url = "https://voice.api.zenvia.com/v2/calls"
+    payload = {
+        "from": zenvia_from,
+        "to": numero_destino,
+        "answerUrl": f"{base_url}/verifica-sinal?tentativa=1"
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {zenvia_token}"
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    print(f"[ZENVIA] Status: {response.status_code}, Response: {response.text}")
 
 def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
@@ -237,40 +184,25 @@ def ligar_para_verificacao_por_nome(nome):
 
 @app.route("/status-call", methods=["POST"])
 def status_call():
-    status = request.form.get("CallStatus")
-    answered_by = request.form.get("AnsweredBy")  # voicemail ou human
+    status = request.json.get("status")
     numero_destino = request.args.get("numero_destino")
-
-    print(f"[STATUS] {status}, [RESPONDIDO POR] {answered_by}")
-
-    if answered_by == "machine":
-        print(f"[ENCERRANDO] Secretária eletrônica detectada no número {numero_destino}.")
-        return Response("", status=204)
+    print(f"[STATUS ZENVIA] {status}")
 
     if status == "no-answer":
-        print(f"[LIGAÇÃO NÃO ATENDIDA] {numero_destino} não atendeu a chamada.")
+        print(f"[LIGAÇÃO NÃO ATENDIDA] {numero_destino}")
         contatos = load_contacts()
         numero_emergencia = contatos.get("emergencia")
         email_emergencia = contatos.get("email_emergencia")
-
         if email_emergencia:
-            enviar_email_emergencia(
-                email_destino=email_emergencia,
-                nome="Contato não atendeu",
-                respostas_obtidas="Ligação não atendida"
-            )
-            print("[EMAIL] Enviado aviso de não atendimento.")
+            enviar_email_emergencia(email_emergencia, "Contato não atendeu", "Ligação não atendida")
         if numero_emergencia:
-            print(f"[LIGAÇÃO EMERGENCIA] Ligando para o número de emergência: {numero_emergencia}")
+            print(f"[LIGAÇÃO EMERGENCIA] Ligando para: {numero_emergencia}")
             ligar_para_verificacao(numero_emergencia)
-        return _twiml_response(f"{numero_destino} não atendeu a ligação. Emergência acionada.")
-
+        return jsonify({"message": "Emergência acionada."})
     return "", 200
 
 def _twiml_response(texto, voice="alice"):
-    resp = VoiceResponse()
-    resp.say(texto, language="pt-BR", voice=voice)
-    return Response(str(resp), mimetype="text/xml")
+    return jsonify({"message": texto})
 
 scheduler = BackgroundScheduler(timezone=timezone("America/Sao_Paulo"))
 
@@ -280,7 +212,6 @@ def agendar_unica():
     nome = data.get("nome")
     hora = int(data.get("hora"))
     minuto = int(data.get("minuto"))
-
     job_id = f"teste_{nome}_{hora}_{minuto}"
     scheduler.add_job(
         func=lambda: ligar_para_verificacao_por_nome(nome),
@@ -290,7 +221,6 @@ def agendar_unica():
         id=job_id,
         replace_existing=True
     )
-
     return jsonify({"status": "ok", "mensagem": f"Ligação para {nome} agendada às {hora:02d}:{minuto:02d}"})
 
 def agendar_multiplas_ligacoes():
@@ -308,9 +238,7 @@ def agendar_multiplas_ligacoes():
         )
 
 def agendar_ligacoes_fixas():
-    ligacoes = [
-#       {"nome": "fk", "hora": 9, "minuto": 22},
-    ]
+    ligacoes = []
     for i, item in enumerate(ligacoes):
         scheduler.add_job(
             func=lambda nome=item["nome"]: ligar_para_verificacao_por_nome(nome),
@@ -323,9 +251,7 @@ def agendar_ligacoes_fixas():
 
 agendar_ligacoes_fixas()
 
-ligacoes = {
-#   "jordan": [(10, 00), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
-}
+ligacoes = {}
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
         scheduler.add_job(
