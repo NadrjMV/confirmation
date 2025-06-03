@@ -305,7 +305,6 @@ agendar_multiplas_ligacoes()
 scheduler.start()
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
 #created by Jordanlvs 💼, all rights reserved ®
