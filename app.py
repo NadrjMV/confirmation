@@ -228,9 +228,18 @@ def ligar_para_verificacao(numero_destino):
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
+
+    with open("contacts.json", "r", encoding="utf-8") as f:
+    contatos = json.load(f)
+
+for nome, numero in contatos.items():
+    # Pular se não for um número de telefone
+    if not numero.startswith("+"):
+        print(f"[IGNORADO] {nome}: não é um número de telefone.")
+        continue
+    
     payload = {
-        "from": os.getenv("INFOBIP_NUMBER"),
-        "to": numero_destino,
+        "to": numero,
         "actions": [
             {
                 "input": {
@@ -343,7 +352,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-   "jordan": [(10, 29), (10, 32), (10, 35)],
+   "jordan": [(10, 45), (10, 47), (10, 50)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
