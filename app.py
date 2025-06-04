@@ -220,7 +220,10 @@ def ligar_para_verificacao(numero_destino):
 
     # Chamada via Infobip API
     url = f"{INF_OBIP_BASE_URL}/voice/1/calls"
-    headers = {
+    print(f"INFOBIP_BASE_URL: '{INF_OBIP_BASE_URL}'")
+    print(f"URL final para POST: '{url}'")
+
+        headers = {
         "Authorization": f"App {INFOBIP_API_KEY}",
         "Content-Type": "application/json",
         "Accept": "application/json"
