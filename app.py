@@ -79,7 +79,7 @@ def verifica_sinal():
 
     if "protegido" in resposta:
         print("[SUCESSO] Palavra correta detectada.")
-        return _twiml_response("Entendido. Obrigado.", voice="alice")
+        return _infobip_response("Entendido. Obrigado.", voice="alice")
 
     if tentativa < 2:
         print("[TENTATIVA FALHOU] Repetindo verificação...")
@@ -126,10 +126,10 @@ def verifica_sinal():
             nome=nome_falhou,
             respostas_obtidas=respostas_obtidas
         )
-        return _twiml_response("Falha na confirmação. Mensagem de emergência enviada por e-mail.", voice="alice")
+        return _infobip_response("Falha na confirmação. Mensagem de emergência enviada por e-mail.", voice="alice")
     else:
         print("[ERRO] E-mail de emergência não encontrado ou inválido.")
-        return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
+        return _infobip_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
 
 def enviar_email_emergencia(email_destino, nome, respostas_obtidas):
     mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
@@ -164,7 +164,7 @@ def verifica_emergencia():
 
     if any(palavra in resposta for palavra in confirmacoes):
         print("Confirmação recebida do chefe.")
-        return _twiml_response("Confirmação recebida. Obrigado.", voice="alice")
+        return _infobip_response("Confirmação recebida. Obrigado.", voice="alice")
 
     if tentativa < 3:
         print("Sem confirmação. Repetindo mensagem...")
@@ -189,7 +189,7 @@ def verifica_emergencia():
         return jsonify(resp)
 
     print("Nenhuma confirmação após múltiplas tentativas.")
-    return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
+    return _infobip_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
 
 @app.route("/testar-email-emergencia")
 def testar_email_emergencia():
@@ -226,7 +226,7 @@ def ligar_para_verificacao(numero_destino):
         "Accept": "application/json"
     }
     payload = {
-        "from": twilio_number,
+        "from": os.getenv("INFOBIP_NUMBER"),
         "to": numero_destino,
         "actions": [
             {
@@ -267,12 +267,22 @@ def ligar_para_verificacao_por_nome(nome):
     else:
         print(f"[ERRO] Contato '{nome}' não encontrado ou inválido.")
 
-def _twiml_response(texto, voice="alice"):
-    # Resposta para Twilio usada nas rotas existentes para simplicidade
-    from twilio.twiml.voice_response import VoiceResponse
-    resp = VoiceResponse()
-    resp.say(texto, language="pt-BR", voice=voice)
-    return Response(str(resp), mimetype="text/xml")
+def _infobip_response(texto, voice="female"):
+    """
+    Gera resposta JSON para webhook Infobip Voice API,
+    falando o texto passado, com voz e idioma configurados.
+    """
+    return jsonify({
+        "actions": [
+            {
+                "say": {
+                    "text": texto,
+                    "voice": voice,
+                    "language": "pt-BR"
+                }
+            }
+        ]
+    })
 
 def _infobip_voice_response():
     # Template básico resposta JSON para Infobip Voice API webhook
