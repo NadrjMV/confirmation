@@ -66,6 +66,10 @@ def get_contacts():
 @app.route("/painel-contatos.html")
 def serve_painel():
     return send_from_directory(".", "painel-contatos.html")
+
+@app.route('/relatorio-chamadas')
+def relatorio_chamadas():
+    return send_from_directory(".", "painel-contatos.html")
     
 @app.route("/verifica-sinal", methods=["GET", "POST"])
 def verifica_sinal():
@@ -346,7 +350,7 @@ def delete_schedule():
 agendar_multiplas_ligacoes()
 scheduler.start()
 
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #    app.run(host="0.0.0.0", port=port, debug=True)
 
 #created by Jordanlvs 💼, all rights reserved ®
