@@ -340,7 +340,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-   "jordan": [(9, 51), (9, 55), (10, 0)],
+   "jordan": [(10, 15), (10, 18), (10, 25)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
