@@ -16,7 +16,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Carregar variáveis do ambiente para Infobip
-INF_OBIP_BASE_URL = os.getenv("INFOBIP_BASE_URL")  # ex: https://yourinfobipdomain.com
+INFOBIP_BASE_URL = os.getenv("INFOBIP_BASE_URL")  # ex: https://yourinfobipdomain.com
 INFOBIP_API_KEY = os.getenv("INFOBIP_API_KEY")
 INFOBIP_FROM_NUMBER = os.getenv("INFOBIP_FROM_NUMBER") 
 
