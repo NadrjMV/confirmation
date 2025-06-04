@@ -223,7 +223,7 @@ def ligar_para_verificacao(numero_destino):
     print(f"INFOBIP_BASE_URL: '{INF_OBIP_BASE_URL}'")
     print(f"URL final para POST: '{url}'")
 
-        headers = {
+    headers = {
         "Authorization": f"App {INFOBIP_API_KEY}",
         "Content-Type": "application/json",
         "Accept": "application/json"
