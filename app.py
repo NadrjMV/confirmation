@@ -219,8 +219,8 @@ def ligar_para_verificacao(numero_destino):
     print(f"[LIGANDO] Iniciando ligação para verificação no número: {numero_destino}")
 
     # Chamada via Infobip API
-    url = f"{INF_OBIP_BASE_URL}/voice/1/calls"
-    print(f"INFOBIP_BASE_URL: '{INF_OBIP_BASE_URL}'")
+    url = f"{INFOBIP_BASE_URL}/voice/1/messages"
+    print(f"INFOBIP_BASE_URL: '{INFOBIP_BASE_URL}'")
     print(f"URL final para POST: '{url}'")
 
     headers = {
