@@ -67,6 +67,9 @@ def get_contacts():
 def serve_painel():
     return send_from_directory(".", "painel-contatos.html")
 
+@app.route('/relatorio-chamadas')
+def relatorio_chamadas():
+
 @app.route("/verifica-sinal", methods=["GET", "POST"])
 def verifica_sinal():
     resposta = request.form.get("SpeechResult", "").lower()
