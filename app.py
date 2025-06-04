@@ -4,23 +4,23 @@ import html
 import phonenumbers
 from phonenumbers import NumberParseException, is_valid_number
 from flask import Flask, request, Response, jsonify, send_from_directory
+from twilio.twiml.voice_response import VoiceResponse, Gather
+from twilio.rest import Client
 from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from pytz import timezone
-import requests  # necessário para Infobip API
 
 load_dotenv()
 app = Flask(__name__)
 
-# Carregar variáveis do ambiente para Infobip
-INFOBIP_BASE_URL = os.getenv("INFOBIP_BASE_URL")  # ex: https://yourinfobipdomain.com
-INFOBIP_API_KEY = os.getenv("INFOBIP_API_KEY")
-INFOBIP_FROM_NUMBER = os.getenv("INFOBIP_FROM_NUMBER") 
-
+twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+twilio_number = os.getenv("TWILIO_NUMBER")
 base_url = os.getenv("BASE_URL")
+client = Client(twilio_sid, twilio_token)
 
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 sg = SendGridAPIClient(SENDGRID_API_KEY)
@@ -67,10 +67,6 @@ def get_contacts():
 def serve_painel():
     return send_from_directory(".", "painel-contatos.html")
 
-@app.route('/relatorio-chamadas')
-def relatorio_chamadas():
-    return send_from_directory(".", "painel-contatos.html")
-
 @app.route("/verifica-sinal", methods=["GET", "POST"])
 def verifica_sinal():
     resposta = request.form.get("SpeechResult", "").lower()
@@ -79,29 +75,23 @@ def verifica_sinal():
 
     if "protegido" in resposta:
         print("[SUCESSO] Palavra correta detectada.")
-        return _infobip_response("Entendido. Obrigado.", voice="alice")
+        return _twiml_response("Entendido. Obrigado.", voice="alice")
 
     if tentativa < 2:
         print("[TENTATIVA FALHOU] Repetindo verificação...")
-        resp = _infobip_voice_response()
-        resp['actions'].append({
-            "input": {
-                "type": "speech",
-                "maxSpeechDurationInSeconds": 5,
-                "language": "pt-BR",
-                "hints": [],
-                "endOnSilence": True
-            },
-            "say": {
-                "text": "Contra senha incorreta. Fale novamente.",
-                "voice": "female",
-                "language": "pt-BR"
-            },
-            "redirect": {
-                "actionUrl": f"{base_url}/verifica-sinal?tentativa={tentativa + 1}"
-            }
-        })
-        return jsonify(resp)
+        resp = VoiceResponse()
+        gather = Gather(
+            input="speech",
+            timeout=5,
+            speechTimeout="auto",
+            action=f"{base_url}/verifica-sinal?tentativa={tentativa + 1}",
+            method="POST",
+            language="pt-BR"
+        )
+        gather.say("Contra senha incorreta. Fale novamente.", language="pt-BR", voice="alice")
+        resp.append(gather)
+        resp.redirect(f"{base_url}/verifica-sinal?tentativa={tentativa + 1}", method="POST")
+        return Response(str(resp), mimetype="text/xml")
 
     print("[FALHA TOTAL] Enviando e-mail para emergência...")
     contatos = load_contacts()
@@ -120,16 +110,16 @@ def verifica_sinal():
     print(f"[DEBUG] E-mail emergência: {email_emergencia}")
 
     if email_emergencia:
-        respostas_obtidas = resposta
+        respostas_obtidas = resposta  # Resposta obtida durante a verificação
         enviar_email_emergencia(
             email_destino=email_emergencia,
             nome=nome_falhou,
             respostas_obtidas=respostas_obtidas
         )
-        return _infobip_response("Falha na confirmação. Mensagem de emergência enviada por e-mail.", voice="alice")
+        return _twiml_response("Falha na confirmação. Mensagem de emergência enviada por e-mail.", voice="alice")
     else:
         print("[ERRO] E-mail de emergência não encontrado ou inválido.")
-        return _infobip_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
+        return _twiml_response("Erro ao tentar contatar emergência. Verifique os números cadastrados.", voice="alice")
 
 def enviar_email_emergencia(email_destino, nome, respostas_obtidas):
     mensagem = f"Verificação do {nome} não correspondeu. Respostas obtidas: {respostas_obtidas}. Favor verificar."
@@ -164,32 +154,26 @@ def verifica_emergencia():
 
     if any(palavra in resposta for palavra in confirmacoes):
         print("Confirmação recebida do chefe.")
-        return _infobip_response("Confirmação recebida. Obrigado.", voice="alice")
+        return _twiml_response("Confirmação recebida. Obrigado.", voice="alice")
 
     if tentativa < 3:
         print("Sem confirmação. Repetindo mensagem...")
-        resp = _infobip_voice_response()
-        resp['actions'].append({
-            "input": {
-                "type": "speech",
-                "maxSpeechDurationInSeconds": 5,
-                "language": "pt-BR",
-                "hints": [],
-                "endOnSilence": True
-            },
-            "say": {
-                "text": "Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.",
-                "voice": "female",
-                "language": "pt-BR"
-            },
-            "redirect": {
-                "actionUrl": f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}"
-            }
-        })
-        return jsonify(resp)
+        resp = VoiceResponse()
+        gather = Gather(
+            input="speech",
+            timeout=5,
+            speechTimeout="auto",
+            action=f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}",
+            method="POST",
+            language="pt-BR"
+        )
+        gather.say("Alerta de verificação de segurança. Por favor, confirme dizendo OK ou Entendido.", language="pt-BR", voice="alice")
+        resp.append(gather)
+        resp.redirect(f"{base_url}/verifica-emergencia?tentativa={tentativa + 1}", method="POST")
+        return Response(str(resp), mimetype="text/xml")
 
     print("Nenhuma confirmação após múltiplas tentativas.")
-    return _infobip_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
+    return _twiml_response("Nenhuma confirmação recebida. Encerrando a chamada.", voice="alice")
 
 @app.route("/testar-email-emergencia")
 def testar_email_emergencia():
@@ -217,58 +201,26 @@ def testar_verificacao(nome):
 def ligar_para_verificacao(numero_destino):
     full_url = f"{base_url}/verifica-sinal?tentativa=1"
     print(f"[LIGANDO] Iniciando ligação para verificação no número: {numero_destino}")
-
-    # Chamada via Infobip API
-    url = f"{INFOBIP_BASE_URL}/voice/1/messages"
-    print(f"INFOBIP_BASE_URL: '{INFOBIP_BASE_URL}'")
-    print(f"URL final para POST: '{url}'")
-
-    headers = {
-        "Authorization": f"App {INFOBIP_API_KEY}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
-
-    with open("contacts.json", "r", encoding="utf-8") as f:
-    contatos = json.load(f)
-
-for nome, numero in contatos.items():
-    # Pular se não for um número de telefone
-    if not numero.startswith("+"):
-        print(f"[IGNORADO] {nome}: não é um número de telefone.")
-        continue
     
-    payload = {
-        "to": numero,
-        "actions": [
-            {
-                "input": {
-                    "type": "speech",
-                    "maxSpeechDurationInSeconds": 5,
-                    "language": "pt-BR",
-                    "endOnSilence": True
-                }
-            },
-            {
-                "say": {
-                    "text": "Central de monitoramento?",
-                    "voice": "female",
-                    "language": "pt-BR"
-                }
-            },
-            {
-                "redirect": {
-                    "actionUrl": full_url
-                }
-            }
-        ]
-    }
+    response = VoiceResponse()
+    gather = Gather(
+        input="speech",
+        timeout=5,
+        speechTimeout="auto",
+        action=full_url,
+        method="POST",
+        language="pt-BR"
+    )
+    gather.say("Central de monitoramento?", language="pt-BR", voice="alice")
+    response.append(gather)
+    response.redirect(full_url, method="POST")
 
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code == 201:
-        print(f"[LIGAÇÃO INICIADA] Número: {numero_destino}")
-    else:
-        print(f"[ERRO] Não foi possível iniciar a ligação: {response.status_code} - {response.text}")
+    call = client.calls.create(
+        to=numero_destino,
+        from_=twilio_number,
+        twiml=response
+    )
+    print(f"[LIGAÇÃO INICIADA] SID da chamada: {call.sid}")
 
 def ligar_para_verificacao_por_nome(nome):
     contatos = load_contacts()
@@ -279,26 +231,10 @@ def ligar_para_verificacao_por_nome(nome):
     else:
         print(f"[ERRO] Contato '{nome}' não encontrado ou inválido.")
 
-def _infobip_response(texto, voice="female"):
-    """
-    Gera resposta JSON para webhook Infobip Voice API,
-    falando o texto passado, com voz e idioma configurados.
-    """
-    return jsonify({
-        "actions": [
-            {
-                "say": {
-                    "text": texto,
-                    "voice": voice,
-                    "language": "pt-BR"
-                }
-            }
-        ]
-    })
-
-def _infobip_voice_response():
-    # Template básico resposta JSON para Infobip Voice API webhook
-    return {"actions": []}
+def _twiml_response(texto, voice="alice"):
+    resp = VoiceResponse()
+    resp.say(texto, language="pt-BR", voice=voice)
+    return Response(str(resp), mimetype="text/xml")
 
 scheduler = BackgroundScheduler(timezone=timezone("America/Sao_Paulo"))
 
@@ -352,7 +288,7 @@ def agendar_ligacoes_fixas():
 agendar_ligacoes_fixas()
 
 ligacoes = {
-   "jordan": [(10, 45), (10, 47), (10, 50)],
+#   "jordan": [(10, 00), (11, 00), (12, 00), (13, 00), (14, 00), (15, 00)],
 }
 for nome, horarios in ligacoes.items():
     for i, (hora, minuto) in enumerate(horarios):
@@ -365,25 +301,11 @@ for nome, horarios in ligacoes.items():
             replace_existing=True
         )
 
-agendamentos = {}
-
-@app.route('/add-schedule', methods=['POST'])
-def add_schedule():
-    data = request.json
-    nome = data['nome']
-    hora = int(data['hora'])
-    minuto = int(data['minuto'])
-    job_id = f"{nome}_{hora}_{minuto}"
-    scheduler.add_job(
-        func=lambda: ligar_para_verificacao_por_nome(nome),
-        trigger="cron",
-        hour=hora,
-        minute=minuto,
-        id=job_id,
-        replace_existing=True
-    )
-    return jsonify({"status": "ok", "mensagem": f"Agendamento para {nome} às {hora}:{minuto} adicionado."})
-
+agendar_multiplas_ligacoes()
 scheduler.start()
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
 
 #created by Jordanlvs 💼, all rights reserved ®
