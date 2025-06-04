@@ -9,7 +9,6 @@
       margin: 0;
       padding: 0;
     }
-
     body {
       display: flex;
       flex-direction: column;
@@ -19,21 +18,17 @@
       padding: 30px;
       box-sizing: border-box;
     }
-
     main {
       flex: 1;
     }
-
     h1, h2 {
       color: #333;
       text-align: center;
     }
-
     ul {
       list-style-type: none;
       padding: 0;
     }
-
     li {
       background: #fff;
       margin-bottom: 10px;
@@ -44,12 +39,10 @@
       align-items: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-
     li.emergencia {
-      background-color: #f8d7da; /* Vermelho claro para emergência */
+      background-color: #f8d7da;
       border: 1px solid #f5c6cb;
     }
-
     button {
       padding: 8px 12px;
       margin-left: 10px;
@@ -59,25 +52,21 @@
       border-radius: 4px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #0056b3;
     }
-
     input {
       padding: 8px;
       margin-right: 10px;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-
     .form-container {
       margin-top: 20px;
       display: flex;
       justify-content: center;
       gap: 10px;
     }
-
     footer {
       background-color: #e0e0e0;
       padding: 15px 30px;
@@ -86,7 +75,6 @@
       color: #555;
       border-top: 1px solid #ccc;
     }
-
     .footer-content {
       display: flex;
       justify-content: center;
@@ -95,37 +83,55 @@
       max-width: 800px;
       margin: 0 auto;
     }
-
     .footer-content img {
       height: 40px;
       object-fit: contain;
     }
-
     .logo-container {
       display: flex;
       justify-content: center;
       margin-bottom: 20px;
     }
-
     .logo-container img {
       height: 50px;
       object-fit: contain;
     }
-
     @media (max-width: 600px) {
       .footer-content {
         flex-direction: column;
         gap: 10px;
       }
     }
-
+    .relatorio-container {
+      margin-top: 30px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    .falha {
+      background-color: #f8d7da;
+    }
   </style>
 </head>
 <body>
   <div class="logo-container">
     <img src="https://raw.githubusercontent.com/NadrjMV/botcall/main/logo.png" alt="Logo da empresa">
   </div>
-  
+
   <main>
     <h1>📇 Painel de Contatos SunShield</h1>
     <ul id="lista-contatos"></ul>
@@ -136,6 +142,20 @@
       <input id="telefone" placeholder="Telefone (+55...)">
       <button onclick="adicionarContato()">Salvar</button>
     </div>
+
+    <h2>📅 Agendar Ligações</h2>
+    <div class="form-container">
+      <select id="agendamento-nome"></select>
+      <input id="horarios" placeholder="Horários (ex: 11:50,12:30)">
+      <button onclick="adicionarAgendamento()">Agendar</button>
+    </div>
+    <ul id="lista-agendamentos"></ul>
+
+    <div class="relatorio-container">
+      <h2>📝 Relatório de Chamadas</h2>
+      <button onclick="carregarRelatorio()">🔄 Atualizar Relatório</button>
+      <div id="relatorio"></div>
+    </div>
   </main>
 
   <footer>
@@ -144,93 +164,69 @@
     </div>
   </footer>
 
-  <script>
-    async function carregarContatos() {
-      const res = await fetch('/get-contacts');
-      const contatos = await res.json();
-      const lista = document.getElementById('lista-contatos');
-      lista.innerHTML = '';
-      for (const [nome, telefone] of Object.entries(contatos)) {
-        const item = document.createElement('li');
-        const isEmergencia = nome.toLowerCase() === 'emergencia'; // Identificando se é o contato de emergência
-
-        item.classList.add(isEmergencia ? 'emergencia' : ''); // Adiciona a classe 'emergencia' se for o caso
-
-        item.innerHTML = `
-          <span><strong>${nome}</strong>: ${telefone}</span>
-          <div>
-            <button onclick="trocarContato('${nome}')">🔄 Trocar</button>
-            <button onclick="deletarContato('${nome}')">🗑️ Deletar</button>
-          </div>
-        `;
-        lista.appendChild(item);
+<script>
+  async function carregarContatos() {
+    const res = await fetch('/get-contacts');
+    const contatos = await res.json();
+    const lista = document.getElementById('lista-contatos');
+    lista.innerHTML = '';
+    for (const [nome, telefone] of Object.entries(contatos)) {
+      const item = document.createElement('li');
+      if (nome.toLowerCase() === 'emergencia') {
+        item.classList.add('emergencia');
       }
+      item.innerHTML = `
+        <span><strong>${nome}</strong>: ${telefone}</span>
+        <div>
+          <button onclick="trocarContato('${nome}')">🔄 Trocar</button>
+          <button onclick="deletarContato('${nome}')">🗑️ Deletar</button>
+        </div>
+      `;
+      lista.appendChild(item);
     }
+  }
 
-    async function adicionarContato() {
-      const nome = document.getElementById('nome').value;
-      const telefone = document.getElementById('telefone').value;
-      const res = await fetch('/add-contact', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nome, telefone })
-      });
-      const result = await res.json();
-      alert(result.mensagem);
-      carregarContatos();
-    }
+  async function adicionarContato() {
+    const nome = document.getElementById('nome').value;
+    const telefone = document.getElementById('telefone').value;
+    const res = await fetch('/add-contact', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nome, telefone })
+    });
+    const result = await res.json();
+    alert(result.mensagem);
+    carregarContatos();
+  }
 
-    async function trocarContato(nome) {
-      const novoNome = prompt(`Digite o novo nome para o contato "${nome}":`);
-      const novoTelefone = prompt(`Digite o novo telefone para "${novoNome}":`);
-
-      if (novoNome && novoTelefone) {
-        const res = await fetch('/delete-contact', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ nome })
-        });
-
-        const result = await res.json();
-        alert(result.mensagem);
-
-        await fetch('/add-contact', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ nome: novoNome, telefone: novoTelefone })
-        });
-
-        carregarContatos();
-      }
-    }
-
-    async function deletarContato(nome) {
-      const confirmar = confirm(`Tem certeza que deseja remover o contato "${nome}"?`);
-      if (!confirmar) return;
-
-      const res = await fetch('/delete-contact', {
+  async function trocarContato(nome) {
+    const novoNome = prompt(`Digite o novo nome para o contato "${nome}":`);
+    const novoTelefone = prompt(`Digite o novo telefone para "${novoNome}":`);
+    if (novoNome && novoTelefone) {
+      await fetch('/delete-contact', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ nome })
       });
-      const result = await res.json();
-      alert(result.mensagem);
+      await fetch('/add-contact', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nome: novoNome, telefone: novoTelefone })
+      });
       carregarContatos();
     }
+  }
 
+  async function deletarContato(nome) {
+    if (!confirm(`Tem certeza que deseja remover o contato "${nome}"?`)) return;
+    await fetch('/delete-contact', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nome })
+    });
     carregarContatos();
-  </script>
+  }
 
-<h2>📅 Agendar Ligações</h2>
-<div class="form-container">
-  <select id="agendamento-nome"></select>
-  <input id="horarios" placeholder="Horários (ex: 11:50,12:30)">
-  <button onclick="adicionarAgendamento()">Agendar</button>
-</div>
-
-<ul id="lista-agendamentos"></ul>
-
-<script>
   async function carregarContatosParaAgendamento() {
     const res = await fetch('/get-contacts');
     const contatos = await res.json();
@@ -261,7 +257,6 @@
     const nome = document.getElementById('agendamento-nome').value;
     const horariosStr = document.getElementById('horarios').value;
     const horarios = horariosStr.split(',').map(h => h.trim());
-
     const res = await fetch('/add-schedule', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -273,8 +268,7 @@
   }
 
   async function deletarAgendamento(nome) {
-    const confirmar = confirm(`Deseja remover o agendamento de ${nome}?`);
-    if (!confirmar) return;
+    if (!confirm(`Deseja remover o agendamento de ${nome}?`)) return;
     const res = await fetch('/delete-schedule', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -285,9 +279,16 @@
     carregarAgendamentos();
   }
 
+  async function carregarRelatorio() {
+    const res = await fetch('/relatorio-chamadas');
+    const html = await res.text();
+    document.getElementById('relatorio').innerHTML = html;
+  }
+
+  carregarContatos();
   carregarContatosParaAgendamento();
   carregarAgendamentos();
 </script>
-  
+
 </body>
 </html>
